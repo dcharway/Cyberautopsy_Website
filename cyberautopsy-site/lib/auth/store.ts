@@ -7,6 +7,7 @@
 
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 export type WebAuthnCredential = {
@@ -30,8 +31,24 @@ export type User = {
 
 type Store = { users: Record<string, User> };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+/**
+ * Persistence path selection.
+ *
+ * - Dev / VPS:  ./.data/auth-store.json (project root, writable)
+ * - Vercel:     /tmp/cyberautopsy-data/auth-store.json (only writable dir on serverless)
+ * - Fallback:   in-memory only (a final EROFS sets writableFs=false; demo still works
+ *               because the demo user is reseeded on each fresh container).
+ *
+ * The Vercel branch trips off the VERCEL env var that Vercel sets in every invocation.
+ */
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const DATA_DIR = IS_VERCEL
+  ? path.join(os.tmpdir(), "cyberautopsy-data")
+  : path.join(process.cwd(), ".data");
 const STORE_PATH = path.join(DATA_DIR, "auth-store.json");
+
+// Flipped to false the first time we hit EROFS/EACCES. Stops further write attempts.
+let writableFs = true;
 
 const DEMO_EMAIL = "demo@cyberautopsy.com";
 const DEMO_PASSWORD = "cyberautopsy-demo";
@@ -67,13 +84,28 @@ export async function loadStore(): Promise<Store> {
 }
 
 async function persist() {
+  if (!writableFs) return; // already proven unwritable; stay in-memory.
   // Serialize writes to avoid file-lock races on Windows
   writeLock = writeLock.then(async () => {
-    if (!cache) return;
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const tmp = `${STORE_PATH}.tmp-${process.pid}`;
-    await fs.writeFile(tmp, JSON.stringify(cache, null, 2), "utf8");
-    await fs.rename(tmp, STORE_PATH);
+    if (!cache || !writableFs) return;
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      const tmp = `${STORE_PATH}.tmp-${process.pid}`;
+      await fs.writeFile(tmp, JSON.stringify(cache, null, 2), "utf8");
+      await fs.rename(tmp, STORE_PATH);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
+        writableFs = false;
+        console.warn(
+          `[auth/store] Filesystem is read-only (${code}). Falling back to in-memory store. ` +
+            "Sessions persist within this container only. For real persistence, " +
+            "migrate to a database (Vercel Postgres, Vercel KV, or your own)."
+        );
+        return;
+      }
+      throw err;
+    }
   });
   await writeLock;
 }

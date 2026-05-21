@@ -42,7 +42,10 @@ Open <http://localhost:3000>. Sign in at `/portal` with the demo credentials sho
 
 ## Production deploy
 
-See [DEPLOY.md](./DEPLOY.md) for the full Hostinger VPS playbook (DNS → bootstrap → push → build → Nginx → SSL).
+Two supported paths:
+
+- **[VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)** — Vercel (native Next.js host) for the apps + Hostinger for DNS only. Live in ~15 min, auto-deploys on every push.
+- **[DEPLOY.md](./DEPLOY.md)** — Hostinger VPS, full Node.js stack. PM2 + Nginx + Certbot. ~45 min initial setup, full control of the server.
 
 ## Documentation
 

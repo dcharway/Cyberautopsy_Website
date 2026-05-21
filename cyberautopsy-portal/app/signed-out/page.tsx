@@ -10,7 +10,8 @@ const REASONS: Record<string, { title: string; body: string }> = {
 
 export default function SignedOut({ searchParams }: { searchParams: { reason?: string } }) {
   const r = REASONS[searchParams.reason ?? "user"] ?? REASONS.user;
-  const marketingPortal = "http://localhost:3000/portal";
+  const marketingBase = process.env.MARKETING_URL || "http://localhost:3000";
+  const marketingPortal = `${marketingBase}/portal`;
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-6 text-center">
