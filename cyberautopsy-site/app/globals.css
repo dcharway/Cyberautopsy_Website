@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Font CSS variables are injected by next/font in app/layout.tsx.
+   Fallback chain lives in tailwind.config.ts. */
+
+html {
+  background-color: #0A0A0B;
+  color: #FAFAFA;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11", "cv02";
+}
+
+::selection {
+  background: #D4AF37;
+  color: #0A0A0B;
+}
+
+.hairline {
+  background-image: linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent);
+  height: 1px;
+}
+
+.gold-text {
+  background: linear-gradient(135deg, #F2E6B5 0%, #D4AF37 40%, #8C6E1F 80%, #D4AF37 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.classified-stamp {
+  font-family: var(--font-mono);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: #D4AF37;
+  border: 1px solid rgba(212,175,55,0.35);
+  padding: 4px 10px;
+  display: inline-block;
+}
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid #2A2A30;
+  background: #16161A;
+  border-radius: 3px;
+}
+
+/* Focus rings - AA compliant */
+:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Reduce motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Article prose styling — long-form Resources posts. Mirrors WSJ / NYT digital. */
+.prose-article {
+  max-width: 68ch;
+  font-size: 18px;
+  line-height: 1.7;
+}
+.prose-article > * + * { margin-top: 1.25em; }
+.prose-article h2 {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #FAFAFA;
+  margin-top: 2.4em;
+  margin-bottom: 0.4em;
+  scroll-margin-top: 6rem;
+}
+.prose-article h3 {
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #FAFAFA;
+  margin-top: 2em;
+  margin-bottom: 0.3em;
+}
+.prose-article p { color: #E8E8E4; }
+.prose-article a {
+  color: #D4AF37;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.prose-article a:hover { color: #F2E6B5; }
+.prose-article ul, .prose-article ol { padding-left: 1.4em; }
+.prose-article ul li { list-style: none; position: relative; }
+.prose-article ul li::before {
+  content: "";
+  position: absolute;
+  left: -1.1em;
+  top: 0.7em;
+  width: 6px;
+  height: 6px;
+  background: #D4AF37;
+  transform: rotate(45deg);
+}
+.prose-article ol { list-style: decimal; }
+.prose-article ol li::marker { color: #D4AF37; font-family: var(--font-mono); }
+.prose-article blockquote {
+  border-left: 2px solid #D4AF37;
+  padding: 0.3em 0 0.3em 1.4em;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.4rem;
+  line-height: 1.35;
+  color: #FAFAFA;
+}
+.prose-article code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: #16161A;
+  border: 1px solid #1F1F24;
+  padding: 1px 6px;
+}
+.prose-article hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent);
+  margin: 2.4em 0;
+}
+.prose-article .callout {
+  border: 1px solid rgba(212,175,55,0.4);
+  background: rgba(212,175,55,0.05);
+  padding: 1.2em 1.4em;
+  font-size: 16px;
+  color: #FAFAFA;
+}
+.prose-article .callout-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #D4AF37;
+}
