@@ -46,7 +46,19 @@ See [DEPLOY.md](./DEPLOY.md) for the full Hostinger VPS playbook (DNS → bootst
 
 ## Documentation
 
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — local setup, commit conventions, what CI checks
+- [`docs/REPO_GOVERNANCE.md`](./docs/REPO_GOVERNANCE.md) — branch protection, CODEOWNERS, GitHub secrets
 - [`cyberautopsy-site/docs/BRAND_KIT.md`](./cyberautopsy-site/docs/BRAND_KIT.md) — colors, typography, voice
 - [`cyberautopsy-site/docs/SEO_PLAN.md`](./cyberautopsy-site/docs/SEO_PLAN.md) — H1s, meta titles, 20-post content plan
 - [`cyberautopsy-site/docs/HOMEPAGE_WIREFRAME.md`](./cyberautopsy-site/docs/HOMEPAGE_WIREFRAME.md) — section-by-section homepage spec
 - [`cyberautopsy-portal/README.md`](./cyberautopsy-portal/README.md) — portal architecture and modules
+
+## License
+
+Proprietary. See [LICENSE](./LICENSE).
+
+## CI
+
+[![CI](https://github.com/dcharway/Cyberautopsy_Website/actions/workflows/ci.yml/badge.svg)](https://github.com/dcharway/Cyberautopsy_Website/actions/workflows/ci.yml)
+
+`next build` runs against both apps on every push to `main` and every pull request. See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).

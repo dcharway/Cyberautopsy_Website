@@ -1,0 +1,56 @@
+# CyberAutopsy CI
+#
+# Runs on every push to main and every pull request. Both apps build in parallel
+# so a failure in one doesn't mask a failure in the other.
+#
+# `next build` is the real signal: it runs the TypeScript typecheck AND produces
+# a deployable artifact. If this passes, the code can be deployed.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [cyberautopsy-site, cyberautopsy-portal]
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+
+    env:
+      # CI-only fake — build doesn't need a real one, but the session lib reads it on import.
+      SESSION_SECRET: ci-only-shared-fake-secret-do-not-trust
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies (locked)
+        run: npm ci --no-audit --no-fund
+
+      - name: Production build
+        run: npx next build

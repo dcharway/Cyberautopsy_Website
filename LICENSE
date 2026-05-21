@@ -1,0 +1,42 @@
+CyberAutopsy — Proprietary License
+Copyright (c) 2026 CyberAutopsy LLC. All rights reserved.
+
+This source code is proprietary and confidential. It is provided for review,
+audit, and engagement-bound work only. By accessing this repository you agree
+to the terms below.
+
+1. PERMITTED USE
+   - Read access for parties under a current engagement letter, NDA, or
+     written authorization from CyberAutopsy LLC.
+   - Local execution for the sole purpose of validating an engagement
+     deliverable.
+
+2. PROHIBITED USE
+   You may not, without written permission from CyberAutopsy LLC:
+   - copy, fork, or redistribute the source, in whole or in part;
+   - run a public production deployment derived from this source;
+   - relicense, sublicense, sell, or assign rights;
+   - remove or alter copyright notices, license headers, or brand marks;
+   - use the CyberAutopsy mark, wordmark, or logo in any derivative work.
+
+3. NO WARRANTY
+   The software is provided "AS IS", without warranty of any kind, express or
+   implied, including but not limited to the warranties of merchantability,
+   fitness for a particular purpose, and noninfringement. In no event shall
+   the authors or copyright holders be liable for any claim, damages, or
+   other liability, whether in an action of contract, tort, or otherwise,
+   arising from, out of, or in connection with the software or the use or
+   other dealings in the software.
+
+4. TRADEMARKS
+   "CyberAutopsy" is a trademark of CyberAutopsy LLC. Nothing in this license
+   grants permission to use the trademark, the wordmark, the gold-medallion
+   logo, or any confusingly similar mark.
+
+5. GOVERNING LAW
+   This license is governed by the laws of the Commonwealth of Virginia,
+   United States, without regard to its conflict-of-laws principles. Any
+   dispute arising under this license is subject to the exclusive
+   jurisdiction of the state and federal courts located in Northern Virginia.
+
+For licensing inquiries, contact: legal@cyberautopsy.com
