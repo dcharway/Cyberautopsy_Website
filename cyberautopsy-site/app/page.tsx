@@ -8,7 +8,7 @@ import { RiskCalculator } from "@/components/RiskCalculator";
 import { faqSchema } from "@/lib/schema";
 
 export const metadata = {
-  title: "CyberAutopsy — CMMC Level 2 Certification. Guaranteed.",
+  title: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
   description:
     "For DoD contractors who can't afford to lose the next award. An RPO partnered with C3PAOs. Gap to SPRS submission in 90 days. Certified or we don't stop."
 };

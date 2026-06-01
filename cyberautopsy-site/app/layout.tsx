@@ -32,7 +32,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.domain),
   title: {
-    default: "CyberAutopsy — CMMC Level 2 Certification. Guaranteed.",
+    default: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
     template: "%s — CyberAutopsy"
   },
   description:
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   authors: [{ name: "CyberAutopsy" }],
   openGraph: {
     type: "website",
-    title: "CyberAutopsy — CMMC Level 2 Certification. Guaranteed.",
+    title: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
     description:
       "For contractors who can't afford to lose DoD work. Gap to SPRS submission in 90 days. Certified or we don't stop.",
     url: SITE.domain,
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CyberAutopsy — CMMC Level 2 Certification. Guaranteed.",
+    title: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
     description:
       "Former DoD assessors. White-glove compliance for primes and subcontractors with CUI."
   },

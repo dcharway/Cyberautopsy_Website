@@ -1,6 +1,6 @@
 # CyberAutopsy
 
-> CMMC Level 2 Certification. Guaranteed.
+> CMMC Accreditation. Guaranteed.
 
 A high-trust, premium website for a luxury cybersecurity compliance firm serving DoD contractors who need CMMC Level 2 certification to stay eligible to bid.
 
