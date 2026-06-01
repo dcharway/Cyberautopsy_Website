@@ -40,7 +40,7 @@ export function Hero() {
           </div>
 
           <h1 className="mt-10 font-serif text-5xl leading-[1.02] tracking-tightest sm:text-6xl lg:text-7xl">
-            CMMC Level 2 Certification.
+            CMMC Accreditation.
             <br />
             <span className="gold-text">Guaranteed.</span>
           </h1>
