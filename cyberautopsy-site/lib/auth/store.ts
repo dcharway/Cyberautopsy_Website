@@ -26,6 +26,10 @@ export type User = {
   totpEnrolled: boolean;
   webauthn: WebAuthnCredential[];
   currentChallenge: string | null;  // transient per-flow nonce
+  // Password reset: token stored as sha256 hex so the at-rest file doesn't
+  // contain the verbatim secret. The plaintext only exists in the email link.
+  passwordResetTokenHash: string | null;
+  passwordResetExpires: string | null; // ISO date; ignore + clear if past
   createdAt: string;
 };
 
@@ -76,11 +80,23 @@ export async function loadStore(): Promise<Store> {
       totpEnrolled: true,
       webauthn: [],
       currentChallenge: null,
+      passwordResetTokenHash: null,
+      passwordResetExpires: null,
       createdAt: new Date().toISOString()
     };
     await persist();
   }
+  // Backfill new fields on existing users so old stores stay compatible
+  for (const u of Object.values(cache.users)) {
+    if (u.passwordResetTokenHash === undefined) u.passwordResetTokenHash = null;
+    if (u.passwordResetExpires === undefined) u.passwordResetExpires = null;
+  }
   return cache;
+}
+
+/** Demo user constant — referenced from reset endpoint to keep credentials stable across resets. */
+export function isDemoUser(email: string): boolean {
+  return email.toLowerCase() === DEMO_EMAIL;
 }
 
 async function persist() {

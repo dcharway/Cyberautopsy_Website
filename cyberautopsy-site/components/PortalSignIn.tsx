@@ -377,7 +377,10 @@ export function PortalSignIn() {
                     </button>
 
                     <p className="text-center text-[11px] text-bone-400">
-                      Forgot password? Contact your assigned Compliance Surgeon.
+                      <a href="/portal/forgot" className="text-gold-300 hover:text-gold-100 underline-offset-2 hover:underline">
+                        Forgot password?
+                      </a>{" "}
+                      Or contact your assigned Compliance Surgeon.
                     </p>
                   </motion.form>
                 )}
