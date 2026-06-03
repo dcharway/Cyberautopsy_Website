@@ -116,16 +116,32 @@ export async function loadStore(): Promise<Store> {
     console.warn(`[auth/store] Seeded admin user: ${ADMIN_EMAIL}`);
   }
 
-  // Backfill new fields on existing users so old stores stay compatible
+  // Backfill new fields on existing users so old stores stay compatible.
+  // The demo + admin emails are also force-corrected — an earlier deploy
+  // could have persisted role="viewer" for them, and `=== undefined` would
+  // never re-correct a wrong-but-defined value.
+  let dirty = false;
   for (const u of Object.values(cache.users)) {
-    if (u.passwordResetTokenHash === undefined) u.passwordResetTokenHash = null;
-    if (u.passwordResetExpires === undefined) u.passwordResetExpires = null;
-    if (u.role === undefined) {
-      // Existing stores: demo user gets 'demo', anything else defaults to 'viewer'.
-      // Re-seed admin gets handled by the seed block above on first read.
-      u.role = u.email.toLowerCase() === DEMO_EMAIL ? "demo" : "viewer";
+    if (u.passwordResetTokenHash === undefined) {
+      u.passwordResetTokenHash = null;
+      dirty = true;
+    }
+    if (u.passwordResetExpires === undefined) {
+      u.passwordResetExpires = null;
+      dirty = true;
+    }
+    const expectedRole: Role =
+      u.email.toLowerCase() === DEMO_EMAIL
+        ? "demo"
+        : u.email.toLowerCase() === ADMIN_EMAIL && ADMIN_PASSWORD
+        ? "admin"
+        : u.role ?? "viewer";
+    if (u.role !== expectedRole) {
+      u.role = expectedRole;
+      dirty = true;
     }
   }
+  if (dirty) await persist();
   return cache;
 }
 

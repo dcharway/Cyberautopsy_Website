@@ -21,8 +21,10 @@ export function TopBar({
   mfaMethod = "totp",
   role = "viewer"
 }: Props) {
-  const initials = userEmail.slice(0, 1).toUpperCase();
-  const badge = ROLE_BADGE[role];
+  const safeEmail = userEmail || "demo@cyberautopsy.com";
+  const initials = safeEmail.slice(0, 1).toUpperCase();
+  // Defensive: handle any unexpected role value without crashing the shell.
+  const badge = ROLE_BADGE[role] ?? ROLE_BADGE.viewer;
   const RoleIcon = badge.icon;
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-ink-700/70 bg-ink-950/95 px-6 backdrop-blur">
@@ -78,7 +80,7 @@ export function TopBar({
             {initials}
           </div>
           <div className="hidden text-left md:block">
-            <div className="text-xs text-bone-100 max-w-[160px] truncate">{userEmail}</div>
+            <div className="text-xs text-bone-100 max-w-[160px] truncate">{safeEmail}</div>
             <div className="flex items-center gap-1 font-mono text-[10px] text-bone-400">
               {mfaMethod === "webauthn" ? (
                 <><KeyRound size={9} /> WEBAUTHN</>
