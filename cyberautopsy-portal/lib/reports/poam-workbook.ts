@@ -6,9 +6,10 @@
 
 import ExcelJS from "exceljs";
 import { POAMS } from "@/data/poam";
-import { ORG } from "@/lib/utils";
+import { loadEngagement } from "@/lib/engagement";
 import {
   BRAND,
+  applyWatermark,
   styleHeaderRow,
   styleDataRow,
   writeCoverSheet,
@@ -40,6 +41,7 @@ const STATUS_FONT: Record<string, string> = {
 };
 
 export async function buildPOAMWorkbook(): Promise<Buffer> {
+  const e = await loadEngagement();
   const wb = new ExcelJS.Workbook();
   wb.creator = "CyberAutopsy GRC Portal";
   wb.created = new Date();
@@ -51,14 +53,16 @@ export async function buildPOAMWorkbook(): Promise<Buffer> {
     "Plan of Action & Milestones",
     "DoD-format POA&M · CMMC Level 2 · 180-day closure clock",
     [
-      ["Organization", ORG.name],
-      ["CAGE code", ORG.cage],
-      ["System boundary", ORG.systemBoundary],
-      ["Active assessment", ORG.activeAssessment],
+      ["Organization", e.organizationLegal],
+      ["CAGE code", e.cage],
+      ["System boundary", e.systemBoundary],
+      ["Reporting period", e.reportingPeriod],
+      ["Lead assessor", e.assessor],
       ["Generated", new Date().toLocaleString("en-US", { timeZoneName: "short" })],
-      ["Document version", `v1.0 (${isoDate()})`],
+      ["Document version", `${e.documentVersion} (${isoDate()})`],
       ["Total POA&M items", String(POAMS.length)],
-      ["Closure obligation", "180 days from certification (CMMC 2.0)"]
+      ["Closure obligation", "180 days from certification (CMMC 2.0)"],
+      ["Classification", e.classification]
     ]
   );
 
@@ -189,6 +193,11 @@ export async function buildPOAMWorkbook(): Promise<Buffer> {
     const r = rules.addRow([k, v]);
     r.height = 36;
     r.eachCell((c) => (c.alignment = { vertical: "middle", wrapText: true }));
+  });
+
+  applyWatermark(wb, {
+    docTitle: "Plan of Action & Milestones",
+    classification: e.classification
   });
 
   return Buffer.from(await wb.xlsx.writeBuffer());

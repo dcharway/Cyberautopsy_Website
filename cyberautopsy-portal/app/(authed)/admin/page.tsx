@@ -1,8 +1,20 @@
-import { Users, Building2, Plug, KeyRound, Bell, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  Users,
+  Building2,
+  Plug,
+  KeyRound,
+  Bell,
+  ClipboardCheck,
+  Pencil,
+  type LucideIcon
+} from "lucide-react";
 import { getCurrentUser, isAdmin } from "@/lib/auth/permissions";
 import { AdminLockScreen } from "@/components/ui/AdminLockScreen";
+import { loadEngagement } from "@/lib/engagement";
 
 export const metadata = { title: "Admin · CyberAutopsy Portal" };
+export const dynamic = "force-dynamic";
 
 const ROLES = [
   { role: "Partner / Compliance Surgeon", count: 4, perms: "Full access · sign packets" },
@@ -20,7 +32,7 @@ const INTEGRATIONS = [
   { name: "DIBNet",                       status: "Configured", note: "Incident reporting pipeline" }
 ];
 
-export default function AdminPage() {
+export default async function AdminPage() {
   const { role } = getCurrentUser();
   if (!isAdmin(role)) {
     return (
@@ -30,6 +42,9 @@ export default function AdminPage() {
       />
     );
   }
+
+  const engagement = await loadEngagement();
+
   return (
     <div className="space-y-6">
       <header>
@@ -37,18 +52,55 @@ export default function AdminPage() {
         <h1 className="mt-2 font-serif text-4xl tracking-tightest text-bone-50">
           Workspace administration.
         </h1>
+        <p className="mt-2 max-w-2xl text-sm text-bone-300">
+          Customize the engagement metadata that drives every cover sheet, watermark,
+          standardized filename, and signature block in the GRC platform.
+        </p>
       </header>
 
+      {/* Quick actions */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <QuickAction
+          href="/admin/engagement"
+          icon={ClipboardCheck}
+          title="Engagement metadata"
+          subtitle="Client, CAGE, dates, assessor, affirming official"
+        />
+        <QuickAction
+          href="/reports"
+          icon={Building2}
+          title="Generate exports"
+          subtitle="Checklist · Affirmation · SSP · POA&M · Packet"
+        />
+        <QuickAction
+          href="/controls"
+          icon={KeyRound}
+          title="Control posture"
+          subtitle="110 controls · SPRS · evidence walk-through"
+        />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Organization */}
-        <Card icon={Building2} title="Organization">
+        {/* Organization (live) */}
+        <Card icon={Building2} title="Organization" action={{ href: "/admin/engagement", label: "Edit" }}>
           <dl className="space-y-3 text-sm">
-            <Row k="Legal name" v="Northwind Defense Systems, LLC" />
-            <Row k="CAGE code" v="1A2B3" />
-            <Row k="System boundary" v="CUI Enclave — Primary" />
-            <Row k="DoD prime relationships" v="3 active" />
-            <Row k="C3PAO of record" v="Veritas Cyber Assessors" />
+            <Row k="Legal name"            v={engagement.organizationLegal} />
+            <Row k="CAGE code"             v={engagement.cage} />
+            <Row k="DUNS"                  v={engagement.ducns ?? "—"} />
+            <Row k="System boundary"       v={engagement.systemBoundary} />
+            <Row k="Reporting period"      v={engagement.reportingPeriod} />
+            <Row k="Lead assessor"         v={`${engagement.assessor} · ${engagement.rpoFirm}`} />
+            <Row k="C3PAO of record"       v={engagement.c3paoFirm} />
+            <Row k="Affirming officer"     v={`${engagement.affirmingOfficial} · ${engagement.affirmingOfficialTitle}`} />
+            <Row k="Last affirmation"      v={engagement.lastAffirmation ?? "—"} />
+            <Row k="Next affirmation due"  v={engagement.nextAffirmationDue} />
+            <Row k="Document version"      v={engagement.documentVersion} />
+            <Row k="Classification"        v={engagement.classification} />
           </dl>
+          <p className="mt-4 border-t border-ink-700 pt-3 font-mono text-[10px] tracking-widest text-bone-400">
+            LAST UPDATED · {new Date(engagement.updatedAt).toLocaleString("en-US")} ·{" "}
+            <span className="text-bone-200">{engagement.updatedBy}</span>
+          </p>
         </Card>
 
         {/* Users & roles */}
@@ -128,22 +180,61 @@ export default function AdminPage() {
   );
 }
 
+function QuickAction({
+  href,
+  icon: Icon,
+  title,
+  subtitle
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 border border-gold-300/30 bg-ink-900 p-4 transition hover:border-gold-300/60 hover:bg-ink-800"
+    >
+      <span className="flex h-10 w-10 items-center justify-center border border-gold-300/40 bg-gold-300/5 text-gold-300">
+        <Icon size={16} />
+      </span>
+      <div className="flex-1">
+        <div className="text-sm text-bone-50 group-hover:text-gold-100">{title}</div>
+        <div className="font-mono text-[10px] tracking-widest text-bone-400">{subtitle.toUpperCase()}</div>
+      </div>
+    </Link>
+  );
+}
+
 function Card({
   icon: Icon,
   title,
   children,
-  wide
+  wide,
+  action
 }: {
   icon: LucideIcon;
   title: string;
   children: React.ReactNode;
   wide?: boolean;
+  action?: { href: string; label: string };
 }) {
   return (
     <section className={`border border-ink-700 bg-ink-900 p-6 ${wide ? "lg:col-span-2" : ""}`}>
-      <header className="flex items-center gap-2 border-b border-ink-700 pb-3">
-        <Icon size={14} className="text-gold-300" />
-        <h2 className="font-serif text-lg text-bone-50">{title}</h2>
+      <header className="flex items-center justify-between gap-2 border-b border-ink-700 pb-3">
+        <div className="flex items-center gap-2">
+          <Icon size={14} className="text-gold-300" />
+          <h2 className="font-serif text-lg text-bone-50">{title}</h2>
+        </div>
+        {action && (
+          <Link
+            href={action.href}
+            className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-gold-300 hover:text-gold-100"
+          >
+            <Pencil size={10} /> {action.label.toUpperCase()}
+          </Link>
+        )}
       </header>
       <div className="mt-4">{children}</div>
     </section>

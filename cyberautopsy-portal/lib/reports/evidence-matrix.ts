@@ -7,8 +7,8 @@
 import ExcelJS from "exceljs";
 import { CONTROLS, FAMILY_NAMES } from "@/data/controls110";
 import { familyPosture } from "@/lib/analytics";
-import { ORG } from "@/lib/utils";
-import { BRAND, styleHeaderRow, styleDataRow, writeCoverSheet, isoDate } from "./common";
+import { loadEngagement } from "@/lib/engagement";
+import { BRAND, applyWatermark, styleHeaderRow, styleDataRow, writeCoverSheet, isoDate } from "./common";
 
 type SampleEvidence = {
   id: string;
@@ -49,6 +49,7 @@ const STATUS_FONT: Record<string, string> = {
 };
 
 export async function buildEvidenceMatrix(): Promise<Buffer> {
+  const e = await loadEngagement();
   const wb = new ExcelJS.Workbook();
   wb.creator = "CyberAutopsy GRC Portal";
   wb.created = new Date();
@@ -60,12 +61,15 @@ export async function buildEvidenceMatrix(): Promise<Buffer> {
     "Evidence Mapping Matrix",
     "Artifact → Control → Assessment Objective · C3PAO read order",
     [
-      ["Organization", ORG.name],
-      ["CAGE code", ORG.cage],
-      ["System boundary", ORG.systemBoundary],
+      ["Organization", e.organizationLegal],
+      ["CAGE code", e.cage],
+      ["System boundary", e.systemBoundary],
+      ["Reporting period", e.reportingPeriod],
+      ["Lead assessor", e.assessor],
       ["Generated", new Date().toLocaleString("en-US", { timeZoneName: "short" })],
-      ["Document version", `v1.0 (${isoDate()})`],
-      ["File naming convention", "ControlID_Description_YYYY-MM-DD.ext"]
+      ["Document version", `${e.documentVersion} (${isoDate()})`],
+      ["File naming convention", "ControlID_Description_YYYY-MM-DD.ext"],
+      ["Classification", e.classification]
     ]
   );
 
@@ -165,6 +169,11 @@ export async function buildEvidenceMatrix(): Promise<Buffer> {
   for (let i = 2; i <= coverage.rowCount; i++) {
     styleDataRow(coverage, i);
   }
+
+  applyWatermark(wb, {
+    docTitle: "Evidence Mapping Matrix",
+    classification: e.classification
+  });
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

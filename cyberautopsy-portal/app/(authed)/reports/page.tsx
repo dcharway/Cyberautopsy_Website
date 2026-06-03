@@ -1,8 +1,21 @@
-import { Download, FileSpreadsheet, FileText, Package, BarChart3, type LucideIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Package,
+  BarChart3,
+  ClipboardCheck,
+  Stamp,
+  Settings,
+  type LucideIcon
+} from "lucide-react";
 import { getCurrentUser, isAdmin } from "@/lib/auth/permissions";
 import { AdminLockScreen } from "@/components/ui/AdminLockScreen";
+import { loadEngagement } from "@/lib/engagement";
 
 export const metadata = { title: "Reports · CyberAutopsy Portal" };
+export const dynamic = "force-dynamic";
 
 type Report = {
   code: string;
@@ -17,6 +30,30 @@ type Report = {
 };
 
 const REPORTS: Report[] = [
+  {
+    code: "CHECKLIST",
+    icon: ClipboardCheck,
+    title: "CMMC Assessment Checklist",
+    description:
+      "110-control assessor walkthrough workbook with verdict dropdowns, family rollup, findings register, and senior-official sign-off block. PRD §6.4 first release.",
+    formats: ["XLSX"],
+    badge: "Assessor workbook",
+    primary: true,
+    endpoint: "/api/reports/checklist",
+    enabled: true
+  },
+  {
+    code: "AFFIRM",
+    icon: Stamp,
+    title: "Annual Affirmation Statement",
+    description:
+      "Single-page attestation per 32 CFR §170.22, populated with the affirming officer, SPRS score, last-affirmation date, and next-due date. PRD §6.4 first release.",
+    formats: ["XLSX"],
+    badge: "Affirmation",
+    primary: true,
+    endpoint: "/api/reports/affirmation",
+    enabled: true
+  },
   {
     code: "SSP-D",
     icon: FileSpreadsheet,
@@ -33,7 +70,7 @@ const REPORTS: Report[] = [
     icon: FileSpreadsheet,
     title: "POA&M Workbook",
     description:
-      "DoD-style POA&M with risk, milestones, owner, status. Includes 180-day closure projections and CMMC 2.0 eligibility flags.",
+      "DoD-style POA&M with Control ID, weakness, remediation plan, milestones, owner, and status. Includes 180-day closure projections and CMMC 2.0 eligibility flags.",
     formats: ["XLSX"],
     badge: "DoD format",
     endpoint: "/api/reports/poam-workbook",
@@ -76,7 +113,7 @@ const REPORTS: Report[] = [
     icon: Package,
     title: "C3PAO Assessment Packet",
     description:
-      "Complete handoff: SSP Appendix D, POA&M, Evidence Mapping Matrix, SPRS Score, README, and manifest — bundled in a single zip generated from live state.",
+      "Complete handoff: SSP Appendix D, POA&M, Evidence Mapping Matrix, SPRS, Assessment Checklist, Affirmation Statement, README, manifest — bundled in a single zip from live state.",
     formats: ["ZIP"],
     badge: "One-click handoff",
     primary: true,
@@ -85,16 +122,17 @@ const REPORTS: Report[] = [
   }
 ];
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
   const { role } = getCurrentUser();
   if (!isAdmin(role)) {
     return (
       <AdminLockScreen
         feature="Reports & Exports"
-        description="Audit-grade SSP Appendix D, POA&M, Evidence Mapping Matrix, SPRS export, and the one-click C3PAO Assessment Packet are generated from live engagement data and are restricted to admin users."
+        description="Audit-grade SSP Appendix D, POA&M, Evidence Mapping Matrix, SPRS export, Assessment Checklist, Affirmation Statement, and the one-click C3PAO Assessment Packet are generated from live engagement data and are restricted to admin users."
       />
     );
   }
+  const engagement = await loadEngagement();
   return (
     <div className="space-y-6">
       <header>
@@ -107,6 +145,36 @@ export default function ReportsPage() {
           audit-grade artifact directly — no staging, no copy-paste.
         </p>
       </header>
+
+      {/* Engagement metadata chip */}
+      <section className="flex flex-wrap items-center gap-4 border border-gold-300/30 bg-ink-900 px-5 py-4">
+        <div className="flex-1 min-w-[220px]">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">ACTIVE ENGAGEMENT</div>
+          <div className="mt-1 text-sm text-bone-50">{engagement.organizationLegal}</div>
+          <div className="font-mono text-[11px] text-bone-400">
+            CAGE {engagement.cage} &middot; {engagement.systemBoundary}
+          </div>
+        </div>
+        <div className="hidden h-10 w-px bg-ink-700 md:block" />
+        <div className="text-xs text-bone-300">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">Reporting</div>
+          <div className="text-bone-100">{engagement.reportingPeriod}</div>
+        </div>
+        <div className="text-xs text-bone-300">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">Affirming officer</div>
+          <div className="text-bone-100">{engagement.affirmingOfficial}</div>
+        </div>
+        <div className="text-xs text-bone-300">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">Next affirmation</div>
+          <div className="text-bone-100">{engagement.nextAffirmationDue}</div>
+        </div>
+        <Link
+          href="/admin/engagement"
+          className="inline-flex items-center gap-2 border border-gold-300/40 bg-gold-300/5 px-3 py-2 text-xs text-gold-100 hover:bg-gold-300 hover:text-ink-950"
+        >
+          <Settings size={12} /> Edit engagement
+        </Link>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {REPORTS.map((r) => {
@@ -174,9 +242,10 @@ export default function ReportsPage() {
       </div>
 
       <p className="text-xs text-bone-400">
-        Exports are generated server-side at request time from the live portal state. Filenames
-        follow <code className="font-mono text-bone-300">PREFIX_OrgSlug_YYYY-MM-DD.ext</code> per
-        C3PAO conventions.
+        Exports are generated server-side at request time from the live portal state. Every
+        document carries the CyberAutopsy watermark on every page and every sheet. Filenames
+        follow <code className="font-mono text-bone-300">{`{ClientSlug}_{DocumentType}_{YYYY-MM-DD}.ext`}</code> per
+        the engagement metadata.
       </p>
     </div>
   );

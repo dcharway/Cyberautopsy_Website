@@ -8,10 +8,11 @@
 import ExcelJS from "exceljs";
 import { CONTROLS, FAMILY_NAMES } from "@/data/controls110";
 import { countByStatus, sprsScore, familyPosture } from "@/lib/analytics";
-import { ORG } from "@/lib/utils";
+import { loadEngagement } from "@/lib/engagement";
 import {
   BRAND,
   applyStatusCellStyle,
+  applyWatermark,
   styleHeaderRow,
   styleDataRow,
   writeCoverSheet,
@@ -19,6 +20,7 @@ import {
 } from "./common";
 
 export async function buildSSPAppendixD(): Promise<Buffer> {
+  const e = await loadEngagement();
   const wb = new ExcelJS.Workbook();
   wb.creator = "CyberAutopsy GRC Portal";
   wb.created = new Date();
@@ -33,14 +35,16 @@ export async function buildSSPAppendixD(): Promise<Buffer> {
     "SSP Appendix D — Control Summary",
     "NIST SP 800-171 Rev. 2 · CMMC Level 2 · 110 controls",
     [
-      ["Organization", ORG.name],
-      ["CAGE code", ORG.cage],
-      ["System boundary", ORG.systemBoundary],
-      ["Active assessment", ORG.activeAssessment],
-      ["C3PAO of record", ORG.c3pao],
+      ["Organization", e.organizationLegal],
+      ["CAGE code", e.cage],
+      ["System boundary", e.systemBoundary],
+      ["Reporting period", e.reportingPeriod],
+      ["Lead assessor", e.assessor],
+      ["RPO firm", e.rpoFirm],
+      ["C3PAO of record", e.c3paoFirm],
       ["Generated", new Date().toLocaleString("en-US", { timeZoneName: "short" })],
-      ["Document version", `v1.0 (${isoDate()})`],
-      ["Classification", "Controlled Unclassified Information (CUI)"]
+      ["Document version", `${e.documentVersion} (${isoDate()})`],
+      ["Classification", e.classification]
     ]
   );
 
@@ -131,6 +135,11 @@ export async function buildSSPAppendixD(): Promise<Buffer> {
   for (const [code, p] of posture.entries()) {
     stats.addRow([`${code} · ${FAMILY_NAMES[code]}`, p.impl, p.total]);
   }
+
+  applyWatermark(wb, {
+    docTitle: "SSP Appendix D — Control Summary",
+    classification: e.classification
+  });
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

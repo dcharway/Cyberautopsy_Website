@@ -2,7 +2,7 @@
  * Shared report-generation helpers: workbook styling, brand tokens, filename helpers.
  */
 
-import type { Worksheet } from "exceljs";
+import type { Worksheet, Workbook } from "exceljs";
 
 export const BRAND = {
   gold: "FFD4AF37",
@@ -133,3 +133,85 @@ export function writeCoverSheet(ws: Worksheet, title: string, subtitle: string, 
     fgColor: { argb: "FFFBF7E8" } // gold tint
   };
 }
+
+/* ---------- watermark / branding (PRD §6.5) ---------- */
+
+/**
+ * Apply the CyberAutopsy watermark to every sheet of a workbook.
+ *
+ * Implementation uses ExcelJS's headerFooter API, which prints on every
+ * page when the spreadsheet is printed AND is shown in print-preview mode.
+ * Format codes:
+ *   &L / &C / &R = left / center / right
+ *   &"Font,Style"&size&KRRGGBB = font + size + color
+ *   &P = current page, &N = total pages, &D = date
+ *
+ * Call this AFTER all rows/columns are added (the page setup includes a
+ * computed print area based on the final extents).
+ */
+export function applyWatermark(
+  wb: Workbook,
+  opts: { docTitle: string; classification?: string; firmName?: string }
+): void {
+  const docTitle = opts.docTitle;
+  const classification = opts.classification ?? "Controlled Unclassified Information (CUI)";
+  const firmName = opts.firmName ?? "CyberAutopsy LLC";
+
+  // & has to be doubled to escape it inside header/footer codes.
+  const esc = (s: string) => s.replace(/&/g, "&&");
+
+  wb.eachSheet((ws) => {
+    ws.headerFooter = {
+      oddHeader:
+        `&L&"Calibri,Bold"&11&K${BRAND.gold.slice(2)}CYBERAUTOPSY` +
+        `&C&"Calibri,Bold"&10${esc(docTitle)}` +
+        `&R&"Calibri"&9&K808080${esc(classification)}`,
+      oddFooter:
+        `&L&"Calibri,Italic"&9&K808080© ${esc(firmName)} — Confidential` +
+        `&C&"Calibri"&9&K808080Page &P of &N` +
+        `&R&"Calibri"&9&K808080&D`,
+      // Even/first pages get the same (most printers don't honour even/odd
+      // distinctively, but covering them avoids blank headers on long docs).
+      evenHeader:
+        `&L&"Calibri,Bold"&11&K${BRAND.gold.slice(2)}CYBERAUTOPSY` +
+        `&C&"Calibri,Bold"&10${esc(docTitle)}` +
+        `&R&"Calibri"&9&K808080${esc(classification)}`,
+      evenFooter:
+        `&L&"Calibri,Italic"&9&K808080© ${esc(firmName)} — Confidential` +
+        `&C&"Calibri"&9&K808080Page &P of &N` +
+        `&R&"Calibri"&9&K808080&D`,
+      differentFirst: false,
+      differentOddEven: false
+    };
+
+    // Page setup so the watermark prints reliably across viewers. View=pageLayout
+    // means Excel opens the sheet in Page Layout view by default — that mode
+    // shows the header/footer on screen (not just in print preview), so the
+    // CyberAutopsy mark is visible without obstructing the data rows.
+    ws.pageSetup = {
+      ...(ws.pageSetup ?? {}),
+      margins: { left: 0.5, right: 0.5, top: 0.85, bottom: 0.7, header: 0.35, footer: 0.35 },
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      paperSize: 9 // A4; closest universal default
+    };
+  });
+}
+
+/**
+ * Insert the visible in-cell brand banner at row 1 of the sheet.
+ * Call this BEFORE setting up ws.columns / addRow / data validations so the
+ * banner does not shift downstream A1 ranges. Skip for cover sheets.
+ */
+export function addBrandBanner(ws: Worksheet, span: number): void {
+  ws.mergeCells(1, 1, 1, Math.max(1, span));
+  const cell = ws.getCell(1, 1);
+  cell.value = "CYBERAUTOPSY · CMMC L2 ASSESSMENT";
+  cell.font = { name: "Calibri", size: 10, bold: true, color: { argb: BRAND.gold } };
+  cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.ink800 } };
+  ws.getRow(1).height = 22;
+}
+

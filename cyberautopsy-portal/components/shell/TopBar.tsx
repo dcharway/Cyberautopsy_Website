@@ -4,10 +4,19 @@ import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone, ShieldCheck, U
 import { ORG } from "@/lib/utils";
 import type { Role } from "@/lib/auth/session";
 
+type EngagementSummary = {
+  name: string;
+  cage: string;
+  systemBoundary: string;
+  reportingPeriod: string;
+  nextAffirmationDue: string;
+};
+
 type Props = {
   userEmail?: string;
   mfaMethod?: "totp" | "webauthn";
   role?: Role;
+  engagement?: EngagementSummary;
 };
 
 const ROLE_BADGE: Record<Role, { label: string; className: string; icon: LucideIcon }> = {
@@ -16,26 +25,43 @@ const ROLE_BADGE: Record<Role, { label: string; className: string; icon: LucideI
   viewer: { label: "VIEWER",  className: "border-ink-600 text-bone-400",                                    icon: UserIcon }
 };
 
+function clientInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "CA";
+}
+
 export function TopBar({
   userEmail = "demo@cyberautopsy.com",
   mfaMethod = "totp",
-  role = "viewer"
+  role = "viewer",
+  engagement
 }: Props) {
   const safeEmail = userEmail || "demo@cyberautopsy.com";
   const initials = safeEmail.slice(0, 1).toUpperCase();
   // Defensive: handle any unexpected role value without crashing the shell.
   const badge = ROLE_BADGE[role] ?? ROLE_BADGE.viewer;
   const RoleIcon = badge.icon;
+  // Live engagement metadata if provided, otherwise the legacy ORG demo values.
+  const clientName = engagement?.name ?? ORG.name;
+  const clientCage = engagement?.cage ?? ORG.cage;
+  const clientBoundary = engagement?.systemBoundary ?? ORG.systemBoundary;
+  const reportingPeriod = engagement?.reportingPeriod ?? ORG.activeAssessment;
+  const affirmationDue = engagement?.nextAffirmationDue ?? ORG.affirmationDue;
+  const clientChip = clientInitials(clientName);
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-ink-700/70 bg-ink-950/95 px-6 backdrop-blur">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center border border-gold-300/40 bg-gold-300/5">
-          <span className="font-mono text-xs text-gold-300">ND</span>
+          <span className="font-mono text-xs text-gold-300">{clientChip}</span>
         </div>
         <div className="hidden lg:block">
-          <div className="text-sm text-bone-50">{ORG.name}</div>
+          <div className="text-sm text-bone-50">{clientName}</div>
           <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
-            CAGE {ORG.cage} &middot; {ORG.systemBoundary}
+            CAGE {clientCage} &middot; {clientBoundary}
           </div>
         </div>
         <ChevronDown size={14} className="hidden text-bone-400 lg:block" />
@@ -44,8 +70,8 @@ export function TopBar({
       <div className="hidden h-8 w-px bg-ink-700 lg:block" />
 
       <div className="hidden flex-1 grid-cols-2 gap-6 xl:grid">
-        <Pill label="ACTIVE ASSESSMENT" value={ORG.activeAssessment} accent="gold" />
-        <Pill label="AFFIRMATION DUE" value={ORG.affirmationDue} accent="amber" />
+        <Pill label="REPORTING PERIOD" value={reportingPeriod} accent="gold" />
+        <Pill label="AFFIRMATION DUE" value={affirmationDue} accent="amber" />
       </div>
       <div className="flex-1 xl:hidden" />
 

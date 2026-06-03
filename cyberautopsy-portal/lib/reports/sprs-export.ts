@@ -1,10 +1,13 @@
 /**
  * SPRS Score JSON Export — submission-ready format with deduction trail.
+ *
+ * Pulls organization metadata from the live engagement record so renaming
+ * the client in /admin/engagement is reflected in the submission JSON.
  */
 
 import { CONTROLS } from "@/data/controls110";
 import { sprsScore } from "@/lib/analytics";
-import { ORG } from "@/lib/utils";
+import { loadEngagement } from "@/lib/engagement";
 
 type Deduction = {
   controlId: string;
@@ -15,7 +18,8 @@ type Deduction = {
   reason: string;
 };
 
-export function buildSPRSExport() {
+export async function buildSPRSExport() {
+  const e = await loadEngagement();
   const score = sprsScore(CONTROLS);
   const threshold = 88;
   const deductions: Deduction[] = [];
@@ -46,9 +50,24 @@ export function buildSPRSExport() {
 
   return {
     organization: {
-      name: ORG.name,
-      cage: ORG.cage,
-      systemBoundary: ORG.systemBoundary
+      name: e.organizationLegal,
+      cage: e.cage,
+      duns: e.ducns ?? null,
+      systemBoundary: e.systemBoundary
+    },
+    engagement: {
+      assessor: e.assessor,
+      rpoFirm: e.rpoFirm,
+      c3paoFirm: e.c3paoFirm,
+      reportingPeriod: e.reportingPeriod,
+      documentVersion: e.documentVersion,
+      classification: e.classification
+    },
+    affirmation: {
+      affirmingOfficial: e.affirmingOfficial,
+      affirmingOfficialTitle: e.affirmingOfficialTitle,
+      lastAffirmation: e.lastAffirmation,
+      nextAffirmationDue: e.nextAffirmationDue
     },
     generated: new Date().toISOString(),
     framework: "NIST SP 800-171 Rev. 2 / CMMC Level 2",
@@ -65,6 +84,11 @@ export function buildSPRSExport() {
       notImplemented: CONTROLS.filter((c) => c.status === "Not Implemented").length,
       notStarted: CONTROLS.filter((c) => c.status === "Not Started").length,
       underReview: CONTROLS.filter((c) => c.status === "Under Review").length
+    },
+    branding: {
+      issuer: "CyberAutopsy GRC Portal",
+      watermark: "CYBERAUTOPSY · CMMC L2 ASSESSMENT",
+      classification: e.classification
     }
   };
 }
