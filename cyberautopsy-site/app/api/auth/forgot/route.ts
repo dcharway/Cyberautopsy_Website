@@ -6,10 +6,22 @@ import { dispatchIntake } from "@/lib/intake";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MARKETING_BASE =
-  process.env.NEXT_PUBLIC_MARKETING_URL ||
-  process.env.MARKETING_URL ||
-  "http://localhost:3000";
+/**
+ * Build the public origin from the incoming request's headers (Nginx forwards
+ * Host via `proxy_set_header Host $host;`). Production has no MARKETING_URL
+ * on the marketing site itself — only the portal needs that env var. The
+ * request always knows its own origin.
+ */
+function publicOriginFromRequest(req: Request): string {
+  const headers = req.headers;
+  const forwardedProto = headers.get("x-forwarded-proto");
+  const forwardedHost = headers.get("x-forwarded-host") ?? headers.get("host");
+  if (forwardedHost) {
+    const proto = forwardedProto ?? "https";
+    return `${proto}://${forwardedHost}`;
+  }
+  return process.env.MARKETING_URL || "http://localhost:3000";
+}
 
 /**
  * Begin password reset. Always returns 200 regardless of whether the email
@@ -50,7 +62,7 @@ export async function POST(req: Request) {
   user.passwordResetExpires = expiresAt;
   await upsertUser(user);
 
-  const resetUrl = `${MARKETING_BASE}/portal/reset?token=${encodeURIComponent(
+  const resetUrl = `${publicOriginFromRequest(req)}/portal/reset?token=${encodeURIComponent(
     token
   )}&email=${encodeURIComponent(email)}`;
 
