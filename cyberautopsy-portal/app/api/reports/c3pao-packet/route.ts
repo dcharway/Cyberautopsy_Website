@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildC3PAOPacket } from "@/lib/reports/c3pao-packet";
 import { reportFileName } from "@/lib/reports/filename";
+import { requireAdmin } from "@/lib/auth/require";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +9,9 @@ export const dynamic = "force-dynamic";
 // Bundling 3 XLSX files + JSON + README into a zip. Allow a generous timeout.
 export const maxDuration = 30;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const guard = requireAdmin(req);
+  if (guard) return guard;
   const buf = await buildC3PAOPacket();
   return new NextResponse(new Uint8Array(buf), {
     status: 200,

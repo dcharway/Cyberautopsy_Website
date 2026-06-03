@@ -1,4 +1,6 @@
 import { Download, FileSpreadsheet, FileText, Package, BarChart3, type LucideIcon } from "lucide-react";
+import { getCurrentUser, isAdmin } from "@/lib/auth/permissions";
+import { AdminLockScreen } from "@/components/ui/AdminLockScreen";
 
 export const metadata = { title: "Reports · CyberAutopsy Portal" };
 
@@ -84,6 +86,15 @@ const REPORTS: Report[] = [
 ];
 
 export default function ReportsPage() {
+  const { role } = getCurrentUser();
+  if (!isAdmin(role)) {
+    return (
+      <AdminLockScreen
+        feature="Reports & Exports"
+        description="Audit-grade SSP Appendix D, POA&M, Evidence Mapping Matrix, SPRS export, and the one-click C3PAO Assessment Packet are generated from live engagement data and are restricted to admin users."
+      />
+    );
+  }
   return (
     <div className="space-y-6">
       <header>

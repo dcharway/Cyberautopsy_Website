@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
   }
 
-  const token = signSession(email, "totp");
+  const token = signSession(email, "totp", user.role ?? "viewer");
   const callbackUrl = `${PORTAL_BASE}/auth/callback?token=${encodeURIComponent(token)}`;
 
-  return NextResponse.json({ ok: true, token, callbackUrl });
+  return NextResponse.json({ ok: true, token, callbackUrl, role: user.role ?? "viewer" });
 }

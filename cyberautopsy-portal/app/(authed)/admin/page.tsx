@@ -1,4 +1,6 @@
 import { Users, Building2, Plug, KeyRound, Bell, type LucideIcon } from "lucide-react";
+import { getCurrentUser, isAdmin } from "@/lib/auth/permissions";
+import { AdminLockScreen } from "@/components/ui/AdminLockScreen";
 
 export const metadata = { title: "Admin · CyberAutopsy Portal" };
 
@@ -19,6 +21,15 @@ const INTEGRATIONS = [
 ];
 
 export default function AdminPage() {
+  const { role } = getCurrentUser();
+  if (!isAdmin(role)) {
+    return (
+      <AdminLockScreen
+        feature="Admin workspace"
+        description="Organization settings, user roles, integrations, and security controls are administered by admin users. Demo sessions can browse the rest of the portal in read-only mode."
+      />
+    );
+  }
   return (
     <div className="space-y-6">
       <header>

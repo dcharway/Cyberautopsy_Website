@@ -1,15 +1,29 @@
 "use client";
 
-import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone } from "lucide-react";
+import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone, ShieldCheck, User as UserIcon } from "lucide-react";
 import { ORG } from "@/lib/utils";
+import type { Role } from "@/lib/auth/session";
 
 type Props = {
   userEmail?: string;
   mfaMethod?: "totp" | "webauthn";
+  role?: Role;
 };
 
-export function TopBar({ userEmail = "demo@cyberautopsy.com", mfaMethod = "totp" }: Props) {
+const ROLE_BADGE: Record<Role, { label: string; className: string; icon: React.ComponentType<{ size?: number }> }> = {
+  admin:  { label: "ADMIN",   className: "border-gold-300/60 bg-gold-300/10 text-gold-200",                  icon: ShieldCheck },
+  demo:   { label: "DEMO",    className: "border-status-review/60 bg-status-reviewBg text-status-review",   icon: UserIcon },
+  viewer: { label: "VIEWER",  className: "border-ink-600 text-bone-400",                                    icon: UserIcon }
+};
+
+export function TopBar({
+  userEmail = "demo@cyberautopsy.com",
+  mfaMethod = "totp",
+  role = "viewer"
+}: Props) {
   const initials = userEmail.slice(0, 1).toUpperCase();
+  const badge = ROLE_BADGE[role];
+  const RoleIcon = badge.icon;
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-6 border-b border-ink-700/70 bg-ink-950/95 px-6 backdrop-blur">
       <div className="flex items-center gap-3">
@@ -41,6 +55,14 @@ export function TopBar({ userEmail = "demo@cyberautopsy.com", mfaMethod = "totp"
         />
         <span className="font-mono text-[10px] text-bone-400 border border-ink-700 px-1.5 py-0.5">⌘K</span>
       </div>
+
+      <span
+        className={`hidden md:inline-flex items-center gap-1.5 border px-2 py-1 font-mono text-[10px] tracking-widest2 ${badge.className}`}
+        title={`Role: ${role}`}
+      >
+        <RoleIcon size={11} />
+        {badge.label}
+      </span>
 
       <button
         aria-label="Notifications"

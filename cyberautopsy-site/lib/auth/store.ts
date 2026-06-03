@@ -19,6 +19,8 @@ export type WebAuthnCredential = {
   createdAt: string;
 };
 
+export type Role = "admin" | "demo" | "viewer";
+
 export type User = {
   email: string;
   passwordHash: string;   // scrypt$N$saltB64$hashB64
@@ -30,6 +32,9 @@ export type User = {
   // contain the verbatim secret. The plaintext only exists in the email link.
   passwordResetTokenHash: string | null;
   passwordResetExpires: string | null; // ISO date; ignore + clear if past
+  // RBAC: gates assessment / import-export / admin features in the portal.
+  // Missing = treated as "viewer" (lowest privilege).
+  role: Role;
   createdAt: string;
 };
 
@@ -82,14 +87,44 @@ export async function loadStore(): Promise<Store> {
       currentChallenge: null,
       passwordResetTokenHash: null,
       passwordResetExpires: null,
+      role: "demo",
       createdAt: new Date().toISOString()
     };
     await persist();
   }
+
+  // Seed admin user from env vars. We only seed if ADMIN_PASSWORD is set —
+  // keeps the demo deployment safe by default, and lets ops bootstrap an
+  // admin by adding env vars and restarting PM2.
+  const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@cyberautopsy.org").toLowerCase();
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  const ADMIN_TOTP_SECRET = process.env.ADMIN_TOTP_SECRET || DEMO_TOTP_SECRET;
+  if (ADMIN_PASSWORD && !cache.users[ADMIN_EMAIL]) {
+    cache.users[ADMIN_EMAIL] = {
+      email: ADMIN_EMAIL,
+      passwordHash: hashPassword(ADMIN_PASSWORD),
+      totpSecret: ADMIN_TOTP_SECRET,
+      totpEnrolled: true,
+      webauthn: [],
+      currentChallenge: null,
+      passwordResetTokenHash: null,
+      passwordResetExpires: null,
+      role: "admin",
+      createdAt: new Date().toISOString()
+    };
+    await persist();
+    console.warn(`[auth/store] Seeded admin user: ${ADMIN_EMAIL}`);
+  }
+
   // Backfill new fields on existing users so old stores stay compatible
   for (const u of Object.values(cache.users)) {
     if (u.passwordResetTokenHash === undefined) u.passwordResetTokenHash = null;
     if (u.passwordResetExpires === undefined) u.passwordResetExpires = null;
+    if (u.role === undefined) {
+      // Existing stores: demo user gets 'demo', anything else defaults to 'viewer'.
+      // Re-seed admin gets handled by the seed block above on first read.
+      u.role = u.email.toLowerCase() === DEMO_EMAIL ? "demo" : "viewer";
+    }
   }
   return cache;
 }

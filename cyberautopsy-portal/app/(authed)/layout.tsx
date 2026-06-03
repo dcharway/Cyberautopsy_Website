@@ -1,18 +1,17 @@
-import { headers } from "next/headers";
 import { TopBar } from "@/components/shell/TopBar";
 import { LeftNav } from "@/components/shell/LeftNav";
+import { DemoBanner } from "@/components/shell/DemoBanner";
+import { getCurrentUser } from "@/lib/auth/permissions";
 
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
-  // Identity forwarded by middleware
-  const h = headers();
-  const userEmail = h.get("x-cyber-user") ?? "Unknown";
-  const mfaMethod = (h.get("x-cyber-mfa") as "totp" | "webauthn" | null) ?? "totp";
+  const user = getCurrentUser();
 
   return (
     <>
-      <TopBar userEmail={userEmail} mfaMethod={mfaMethod} />
+      <TopBar userEmail={user.email} mfaMethod={user.mfa} role={user.role} />
+      {user.role === "demo" && <DemoBanner />}
       <div className="flex">
-        <LeftNav />
+        <LeftNav role={user.role} />
         <main id="main" className="min-w-0 flex-1 px-8 py-8">{children}</main>
       </div>
     </>

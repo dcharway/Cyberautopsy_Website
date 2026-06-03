@@ -26,10 +26,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Forward identity downstream via request header so server components can read it.
+  // Forward identity + role downstream via request header so server
+  // components and route handlers can read it without re-verifying the cookie.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-cyber-user", payload.sub);
   requestHeaders.set("x-cyber-mfa", payload.mfa);
+  requestHeaders.set("x-cyber-role", payload.role);
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 

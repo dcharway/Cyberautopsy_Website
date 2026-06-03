@@ -11,18 +11,26 @@ import { createHmac, timingSafeEqual } from "crypto";
 const DEFAULT_SECRET = "dev-only-cyberautopsy-secret-do-not-use-in-prod";
 const SECRET = process.env.SESSION_SECRET || DEFAULT_SECRET;
 
+export type Role = "admin" | "demo" | "viewer";
+
 export type SessionPayload = {
   sub: string;        // user email
   mfa: "totp" | "webauthn";
+  role: Role;         // RBAC — portal pages + API endpoints gate on this
   iat: number;        // issued at, unix seconds
   exp: number;        // expires at, unix seconds
 };
 
 const ONE_HOUR = 60 * 60;
 
-export function signSession(sub: string, mfa: SessionPayload["mfa"], ttlSeconds = 8 * ONE_HOUR): string {
+export function signSession(
+  sub: string,
+  mfa: SessionPayload["mfa"],
+  role: Role,
+  ttlSeconds = 8 * ONE_HOUR
+): string {
   const now = Math.floor(Date.now() / 1000);
-  const payload: SessionPayload = { sub, mfa, iat: now, exp: now + ttlSeconds };
+  const payload: SessionPayload = { sub, mfa, role, iat: now, exp: now + ttlSeconds };
   const payloadB64 = b64urlEncode(Buffer.from(JSON.stringify(payload), "utf8"));
   const sig = signRaw(payloadB64);
   return `${payloadB64}.${sig}`;
@@ -46,6 +54,11 @@ export function verifySession(token: string): SessionPayload | null {
   if (typeof parsed.exp !== "number" || parsed.exp < Math.floor(Date.now() / 1000)) return null;
   if (parsed.mfa !== "totp" && parsed.mfa !== "webauthn") return null;
   if (typeof parsed.sub !== "string" || !parsed.sub) return null;
+  // Tokens issued before the role field existed get defaulted to "viewer" —
+  // the safest lowest-privilege bucket.
+  if (parsed.role !== "admin" && parsed.role !== "demo" && parsed.role !== "viewer") {
+    parsed.role = "viewer";
+  }
   return parsed;
 }
 

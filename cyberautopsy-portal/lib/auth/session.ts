@@ -7,9 +7,12 @@
 
 const DEFAULT_SECRET = "dev-only-cyberautopsy-secret-do-not-use-in-prod";
 
+export type Role = "admin" | "demo" | "viewer";
+
 export type SessionPayload = {
   sub: string;
   mfa: "totp" | "webauthn";
+  role: Role;
   iat: number;
   exp: number;
 };
@@ -47,6 +50,11 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   if (typeof parsed.exp !== "number" || parsed.exp < Math.floor(Date.now() / 1000)) return null;
   if (parsed.mfa !== "totp" && parsed.mfa !== "webauthn") return null;
   if (typeof parsed.sub !== "string" || !parsed.sub) return null;
+  // Tokens issued before the role field existed default to "viewer" — the
+  // safest lowest-privilege bucket. Unknown values also fall back.
+  if (parsed.role !== "admin" && parsed.role !== "demo" && parsed.role !== "viewer") {
+    parsed.role = "viewer";
+  }
   return parsed;
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { finishAuthentication } from "@/lib/auth/webauthn";
 import { signSession } from "@/lib/auth/session";
+import { getUser } from "@/lib/auth/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +17,11 @@ export async function POST(req: Request) {
 
   try {
     await finishAuthentication(email, body.response);
-    const token = signSession(email, "webauthn");
+    const user = await getUser(email);
+    const role = user?.role ?? "viewer";
+    const token = signSession(email, "webauthn", role);
     const callbackUrl = `${PORTAL_BASE}/auth/callback?token=${encodeURIComponent(token)}`;
-    return NextResponse.json({ ok: true, token, callbackUrl });
+    return NextResponse.json({ ok: true, token, callbackUrl, role });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Authentication failed";
     return NextResponse.json({ error: msg }, { status: 401 });
