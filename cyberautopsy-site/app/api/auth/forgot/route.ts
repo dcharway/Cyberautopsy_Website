@@ -13,14 +13,17 @@ export const dynamic = "force-dynamic";
  * request always knows its own origin.
  */
 function publicOriginFromRequest(req: Request): string {
+  // Explicit env wins — production sets MARKETING_URL on the marketing site
+  // so the URL is deterministic regardless of how Nginx proxies headers.
+  if (process.env.MARKETING_URL) return process.env.MARKETING_URL;
+  // Dev fallback: derive from request headers
   const headers = req.headers;
-  const forwardedProto = headers.get("x-forwarded-proto");
   const forwardedHost = headers.get("x-forwarded-host") ?? headers.get("host");
-  if (forwardedHost) {
-    const proto = forwardedProto ?? "https";
+  if (forwardedHost && !forwardedHost.startsWith("127.0.0.1") && !forwardedHost.startsWith("localhost")) {
+    const proto = headers.get("x-forwarded-proto") ?? "https";
     return `${proto}://${forwardedHost}`;
   }
-  return process.env.MARKETING_URL || "http://localhost:3000";
+  return "http://localhost:3000";
 }
 
 /**
