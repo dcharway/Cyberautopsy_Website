@@ -9,12 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/pdfkit": "^0.17.6",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
     "framer-motion": "^11.3.19",
     "jszip": "^3.10.1",
     "lucide-react": "^0.408.0",
     "next": "14.2.5",
+    "pdfkit": "^0.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.4.0"

@@ -103,10 +103,12 @@ const REPORTS: Report[] = [
     icon: FileText,
     title: "Executive Brief",
     description:
-      "One-page exec summary: SPRS, controls met, top 5 risks, days to affirmation. Board-ready language. PDF generation in progress.",
+      "One-page PDF for board / leadership: SPRS score, controls met, top five risks (with driver + impact), and days remaining until the next 32 CFR §170.22 affirmation. Tailored per client.",
     formats: ["PDF"],
-    badge: "Coming next",
-    enabled: false
+    badge: "Board-ready",
+    primary: true,
+    endpoint: "/api/reports/executive-brief",
+    enabled: true
   },
   {
     code: "PACKET",

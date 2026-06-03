@@ -21,6 +21,7 @@ import { buildEvidenceMatrix } from "./evidence-matrix";
 import { buildSPRSExport } from "./sprs-export";
 import { buildAssessmentChecklist } from "./checklist";
 import { buildAffirmationStatement } from "./affirmation";
+import { buildExecutiveBrief } from "./executive-brief";
 import { CONTROLS } from "@/data/controls110";
 import { POAMS } from "@/data/poam";
 import { sprsScore } from "@/lib/analytics";
@@ -30,12 +31,13 @@ import { isoDate } from "./common";
 export async function buildC3PAOPacket(): Promise<Buffer> {
   const e = await loadEngagement();
 
-  const [sspBuf, poamBuf, evidBuf, checklistBuf, affBuf, sprs] = await Promise.all([
+  const [sspBuf, poamBuf, evidBuf, checklistBuf, affBuf, execBuf, sprs] = await Promise.all([
     buildSSPAppendixD(),
     buildPOAMWorkbook(),
     buildEvidenceMatrix(),
     buildAssessmentChecklist(),
     buildAffirmationStatement(),
+    buildExecutiveBrief(),
     buildSPRSExport()
   ]);
 
@@ -45,7 +47,8 @@ export async function buildC3PAOPacket(): Promise<Buffer> {
     poamSize: poamBuf.length,
     evidSize: evidBuf.length,
     checklistSize: checklistBuf.length,
-    affSize: affBuf.length
+    affSize: affBuf.length,
+    execSize: execBuf.length
   });
 
   const zip = new JSZip();
@@ -56,7 +59,8 @@ export async function buildC3PAOPacket(): Promise<Buffer> {
   zip.file("04_SPRS/SPRS_Score.json", JSON.stringify(sprs, null, 2));
   zip.file("05_Checklist/CMMC_Assessment_Checklist.xlsx", checklistBuf);
   zip.file("06_Affirmation/Annual_Affirmation_Statement.xlsx", affBuf);
-  zip.file("07_Manifest/manifest.json", JSON.stringify(manifest, null, 2));
+  zip.file("07_ExecutiveBrief/Executive_Brief.pdf", execBuf);
+  zip.file("08_Manifest/manifest.json", JSON.stringify(manifest, null, 2));
 
   return zip.generateAsync({
     type: "nodebuffer",
@@ -97,10 +101,12 @@ function buildReadme(e: Engagement): string {
     "02_POAM/        — Plan of Action & Milestones, DoD-format workbook (xlsx)",
     "03_Evidence/    — Evidence Mapping Matrix with C3PAO-style file naming (xlsx)",
     "04_SPRS/        — SPRS submission score, deduction trail per control (json)",
-    "05_Checklist/   — CMMC Assessment Checklist: 110-control walkthrough with",
-    "                  assessor verdict / findings / sign-off (xlsx)",
-    "06_Affirmation/ — Annual Affirmation Statement per 32 CFR §170.22 (xlsx)",
-    "07_Manifest/    — Generation manifest with source metadata (json)",
+    "05_Checklist/      — CMMC Assessment Checklist: 110-control walkthrough with",
+    "                     assessor verdict / findings / sign-off (xlsx)",
+    "06_Affirmation/    — Annual Affirmation Statement per 32 CFR §170.22 (xlsx)",
+    "07_ExecutiveBrief/ — One-page board / leadership PDF: SPRS, controls met,",
+    "                     top 5 risks, days to next affirmation (pdf)",
+    "08_Manifest/       — Generation manifest with source metadata (json)",
     "",
     "INSTRUCTIONS FOR C3PAO",
     "----------------------",
@@ -139,10 +145,11 @@ function buildManifest(
     evidSize: number;
     checklistSize: number;
     affSize: number;
+    execSize: number;
   }
 ) {
   return {
-    packetVersion: "1.1",
+    packetVersion: "1.2",
     generatedAt: new Date().toISOString(),
     generator: "CyberAutopsy GRC Portal",
     framework: "NIST SP 800-171 Rev. 2 / CMMC Level 2",
@@ -174,7 +181,8 @@ function buildManifest(
       { path: "04_SPRS/SPRS_Score.json",                             kind: "json" },
       { path: "05_Checklist/CMMC_Assessment_Checklist.xlsx",         kind: "xlsx", sizeBytes: sizes.checklistSize },
       { path: "06_Affirmation/Annual_Affirmation_Statement.xlsx",    kind: "xlsx", sizeBytes: sizes.affSize },
-      { path: "07_Manifest/manifest.json",                           kind: "json" }
+      { path: "07_ExecutiveBrief/Executive_Brief.pdf",               kind: "pdf",  sizeBytes: sizes.execSize },
+      { path: "08_Manifest/manifest.json",                           kind: "json" }
     ],
     snapshotCounts: {
       controls: CONTROLS.length,
