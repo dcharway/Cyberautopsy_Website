@@ -12,7 +12,8 @@ import {
   FileBarChart,
   Settings,
   HelpCircle,
-  Lock
+  Lock,
+  type LucideIcon
 } from "lucide-react";
 import { Mark } from "./Mark";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,7 @@ import type { Role } from "@/lib/auth/session";
 type NavItem = {
   href: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   count: number | null;
   adminOnly?: boolean;
 };

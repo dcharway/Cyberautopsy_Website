@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone, ShieldCheck, User as UserIcon, type LucideIcon } from "lucide-react";
 import { ORG } from "@/lib/utils";
 import type { Role } from "@/lib/auth/session";
 
@@ -10,7 +10,7 @@ type Props = {
   role?: Role;
 };
 
-const ROLE_BADGE: Record<Role, { label: string; className: string; icon: React.ComponentType<{ size?: number }> }> = {
+const ROLE_BADGE: Record<Role, { label: string; className: string; icon: LucideIcon }> = {
   admin:  { label: "ADMIN",   className: "border-gold-300/60 bg-gold-300/10 text-gold-200",                  icon: ShieldCheck },
   demo:   { label: "DEMO",    className: "border-status-review/60 bg-status-reviewBg text-status-review",   icon: UserIcon },
   viewer: { label: "VIEWER",  className: "border-ink-600 text-bone-400",                                    icon: UserIcon }
