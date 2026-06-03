@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="chrome" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#F7F9FA"/>
+      <stop offset="35%" stop-color="#D5DCE2"/>
+      <stop offset="65%" stop-color="#A6B0B9"/>
+      <stop offset="100%" stop-color="#5E6770"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#2B313A" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="#0A0A0B"/>
+  <path d="M32 6 L52 13 V30 C52 43 43 53 32 58 C21 53 12 43 12 30 V13 Z" fill="url(#chrome)" stroke="url(#edge)" stroke-width="1.2"/>
+  <path d="M32 10 L48 16 V30 C48 41 40 49 32 53 C24 49 16 41 16 30 V16 Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="0.8"/>
+  <path d="M14 32 H22 L26 24 L30 40 L34 18 L38 38 L42 28 H50" fill="none" stroke="#22D3EE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"/>
+  <path d="M14 32 H22 L26 24 L30 40 L34 18 L38 38 L42 28 H50" fill="none" stroke="url(#cyan)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
