@@ -11,5 +11,7 @@ export const SITE = {
   tagline: "CMMC Accreditation. Guaranteed.",
   phone: "+1 (443) 244-2977",
   email: "intake@cyberautopsy.com",
-  calendly: "https://calendly.com/cyberautopsy/contract-risk-audit"
+  // Calendly URL is configured via NEXT_PUBLIC_CALENDLY_URL env var on the VPS.
+  // When unset, the contact page shows a graceful "booking pending setup" panel.
+  calendly: ""
 };

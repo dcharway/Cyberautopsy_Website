@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SITE } from "@/lib/utils";
+import { CalendlyEmbed } from "@/components/CalendlyEmbed";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -192,14 +193,15 @@ export default function Contact() {
                 Fifteen minutes. No pitch. Bring the contract or the email from the prime.
               </p>
 
-              <div className="mt-6 border border-ink-700 bg-ink-950 p-1">
-                <iframe
-                  src={SITE.calendly}
-                  width="100%"
-                  height="640"
-                  title="Book a Contract Risk Audit with CyberAutopsy"
-                  className="block w-full"
-                  loading="lazy"
+              <div className="mt-6">
+                <CalendlyEmbed
+                  fallbackUrl={SITE.calendly}
+                  height={720}
+                  branded={false}
+                  prefill={{
+                    email: email || undefined,
+                    name: company || undefined
+                  }}
                 />
               </div>
 
