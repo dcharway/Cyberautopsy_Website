@@ -1,46 +1,51 @@
 /**
- * Engagement metadata — the customizable template fields used by every
- * exported document (org, CAGE, system boundary, assessor, dates, affirming
- * official). Single record per portal instance; admin edits via
- * /admin/engagement.
+ * Engagement metadata — derived from the active client + active assessment.
  *
- * Persistence mirrors the auth store: JSON file under .data/, with /tmp/
- * fallback on Vercel and in-memory fallback on read-only filesystems.
+ * The active client + assessment selector (lib/assessments.ts → loadActive())
+ * is the source of truth. This module's job is to project the active pair
+ * onto the flat shape that the exporters and shell already consume.
+ *
+ * Backwards compat: if no active assessment exists (fresh deploy, all
+ * archived), we fall back to a hard-coded DEFAULTS record. Editing
+ * /admin/engagement now updates the active *assessment* — not a global
+ * record — so the next export from that assessment reflects the change.
  */
 
 import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
+import { getClient } from "./clients";
+import { getActiveAssessment, loadActive, updateAssessment } from "./assessments";
 
 export type Engagement = {
   // --- Client identity ---
-  organization: string;        // e.g. "Northwind Defense Systems"
-  organizationLegal: string;   // e.g. "Northwind Defense Systems, LLC"
-  cage: string;                // CAGE code
-  ducns?: string;              // optional D-U-N-S
-  systemBoundary: string;      // e.g. "CUI Enclave — Primary"
+  organization: string;
+  organizationLegal: string;
+  cage: string;
+  ducns?: string;
+  systemBoundary: string;
   contractValueUSD?: number;
 
   // --- Engagement parties ---
-  assessor: string;            // RPO compliance surgeon name
-  rpoFirm: string;             // default: "CyberAutopsy LLC"
-  c3paoFirm: string;           // accredited C3PAO partner name
+  assessor: string;
+  rpoFirm: string;
+  c3paoFirm: string;
 
   // --- Dates ---
-  engagementStart: string;     // ISO date
-  scheduledClose: string;      // ISO date — target audit-ready
-  reportingPeriod: string;     // free-form, e.g. "2026-Q2"
+  engagementStart: string;
+  scheduledClose: string;
+  reportingPeriod: string;
 
   // --- Document branding defaults ---
-  documentVersion: string;     // "v1.0"
-  classification: string;      // "Controlled Unclassified Information (CUI)"
+  documentVersion: string;
+  classification: string;
 
   // --- Annual affirmation ---
-  affirmingOfficial: string;          // name of senior officer
-  affirmingOfficialTitle: string;     // e.g. "Chief Executive Officer"
+  affirmingOfficial: string;
+  affirmingOfficialTitle: string;
   affirmingOfficialEmail?: string;
-  lastAffirmation: string | null;     // ISO date
-  nextAffirmationDue: string;         // ISO date
+  lastAffirmation: string | null;
+  nextAffirmationDue: string;
 
   // --- Metadata about the record itself ---
   updatedAt: string;
@@ -73,30 +78,78 @@ const IS_VERCEL = Boolean(process.env.VERCEL);
 const DATA_DIR = IS_VERCEL
   ? path.join(os.tmpdir(), "cyberautopsy-data")
   : path.join(process.cwd(), ".data");
-const STORE_PATH = path.join(DATA_DIR, "engagement.json");
+const FALLBACK_PATH = path.join(DATA_DIR, "engagement.json");
 
-let cache: Engagement | null = null;
+let fallbackCache: Engagement | null = null;
 let writableFs = true;
 let writeLock: Promise<void> = Promise.resolve();
 
-export async function loadEngagement(): Promise<Engagement> {
-  if (cache) return cache;
+async function loadFallback(): Promise<Engagement> {
+  if (fallbackCache) return fallbackCache;
   try {
-    const raw = await fs.readFile(STORE_PATH, "utf8");
-    cache = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Engagement>) };
+    const raw = await fs.readFile(FALLBACK_PATH, "utf8");
+    fallbackCache = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Engagement>) };
   } catch {
-    cache = { ...DEFAULTS };
+    fallbackCache = { ...DEFAULTS };
   }
-  return cache;
+  return fallbackCache;
 }
 
+/** Build the projected engagement from active client + assessment. */
+export async function loadEngagement(): Promise<Engagement> {
+  const active = await loadActive();
+  if (!active.clientId || !active.assessmentId) return loadFallback();
+  const [client, assessment] = await Promise.all([
+    getClient(active.clientId),
+    getActiveAssessment()
+  ]);
+  if (!client || !assessment) return loadFallback();
+  return {
+    organization: client.organization,
+    organizationLegal: client.organizationLegal,
+    cage: client.cage,
+    ducns: client.duns,
+    systemBoundary: client.systemBoundary,
+    contractValueUSD: client.contractValueUSD,
+
+    assessor: assessment.assessor,
+    rpoFirm: client.rpoFirm,
+    c3paoFirm: client.c3paoFirm,
+
+    engagementStart: assessment.engagementStart,
+    scheduledClose: assessment.scheduledClose,
+    reportingPeriod: assessment.reportingPeriod,
+
+    documentVersion: assessment.documentVersion,
+    classification: assessment.classification,
+
+    affirmingOfficial: assessment.affirmingOfficial,
+    affirmingOfficialTitle: assessment.affirmingOfficialTitle,
+    affirmingOfficialEmail: assessment.affirmingOfficialEmail,
+    lastAffirmation: assessment.lastAffirmation,
+    nextAffirmationDue: assessment.nextAffirmationDue,
+
+    updatedAt: assessment.createdAt,
+    updatedBy: assessment.createdBy
+  };
+}
+
+/**
+ * Persist engagement edits.
+ *
+ * Path A — active assessment exists: patch the assessment (assessor, dates,
+ *   reporting period, document version, classification, affirmation) and
+ *   patch the client (organization, CAGE, system boundary, firms, affirming
+ *   official identity).
+ *
+ * Path B — no active assessment: patch the fallback JSON so /admin/engagement
+ *   keeps working on a fresh deploy.
+ */
 export async function saveEngagement(
   updates: Partial<Engagement>,
   updatedBy: string
 ): Promise<Engagement> {
-  const current = await loadEngagement();
-  // Coerce empty strings to undefined for optional fields so they don't
-  // overwrite genuine values with blanks.
+  const active = await loadActive();
   const cleaned: Partial<Engagement> = {};
   for (const [k, v] of Object.entries(updates)) {
     if (typeof v === "string" && v.trim() === "" && !REQUIRED_FIELDS.has(k as keyof Engagement)) {
@@ -104,7 +157,47 @@ export async function saveEngagement(
     }
     (cleaned as Record<string, unknown>)[k] = v;
   }
-  cache = {
+
+  if (active.clientId && active.assessmentId) {
+    const { updateClient } = await import("./clients");
+    // Client-scope fields
+    await updateClient(active.clientId, {
+      organization: cleaned.organization,
+      organizationLegal: cleaned.organizationLegal,
+      cage: cleaned.cage,
+      duns: cleaned.ducns,
+      systemBoundary: cleaned.systemBoundary,
+      contractValueUSD: cleaned.contractValueUSD,
+      rpoFirm: cleaned.rpoFirm,
+      c3paoFirm: cleaned.c3paoFirm,
+      affirmingOfficial: cleaned.affirmingOfficial,
+      affirmingOfficialTitle: cleaned.affirmingOfficialTitle,
+      affirmingOfficialEmail: cleaned.affirmingOfficialEmail
+    });
+    // Assessment-scope fields
+    await updateAssessment(
+      active.assessmentId,
+      {
+        assessor: cleaned.assessor,
+        engagementStart: cleaned.engagementStart,
+        scheduledClose: cleaned.scheduledClose,
+        reportingPeriod: cleaned.reportingPeriod,
+        documentVersion: cleaned.documentVersion,
+        classification: cleaned.classification,
+        affirmingOfficial: cleaned.affirmingOfficial,
+        affirmingOfficialTitle: cleaned.affirmingOfficialTitle,
+        affirmingOfficialEmail: cleaned.affirmingOfficialEmail,
+        lastAffirmation: cleaned.lastAffirmation,
+        nextAffirmationDue: cleaned.nextAffirmationDue
+      },
+      updatedBy
+    );
+    return loadEngagement();
+  }
+
+  // Fallback record
+  const current = await loadFallback();
+  fallbackCache = {
     ...current,
     ...cleaned,
     updatedAt: new Date().toISOString(),
@@ -112,12 +205,12 @@ export async function saveEngagement(
   };
   if (writableFs) {
     writeLock = writeLock.then(async () => {
-      if (!cache || !writableFs) return;
+      if (!fallbackCache || !writableFs) return;
       try {
         await fs.mkdir(DATA_DIR, { recursive: true });
-        const tmp = `${STORE_PATH}.tmp-${process.pid}`;
-        await fs.writeFile(tmp, JSON.stringify(cache, null, 2), "utf8");
-        await fs.rename(tmp, STORE_PATH);
+        const tmp = `${FALLBACK_PATH}.tmp-${process.pid}`;
+        await fs.writeFile(tmp, JSON.stringify(fallbackCache, null, 2), "utf8");
+        await fs.rename(tmp, FALLBACK_PATH);
       } catch (err) {
         const code = (err as NodeJS.ErrnoException).code;
         if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
@@ -130,7 +223,7 @@ export async function saveEngagement(
     });
     await writeLock;
   }
-  return cache;
+  return fallbackCache;
 }
 
 const REQUIRED_FIELDS = new Set<keyof Engagement>([
@@ -161,12 +254,6 @@ export function engagementOrgSlug(e: Engagement): string {
     || "client";
 }
 
-/**
- * Canonical export filename per the PRD:
- *   {ClientSlug}_{DocumentType}_{YYYY-MM-DD}.{ext}
- *
- * Example: northwind-defense-systems_SSP-Appendix-D_2026-06-03.xlsx
- */
 export function exportFileName(e: Engagement, docType: string, ext: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return `${engagementOrgSlug(e)}_${docType}_${date}.${ext}`;

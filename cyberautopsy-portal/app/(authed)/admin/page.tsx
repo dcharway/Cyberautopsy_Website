@@ -59,16 +59,22 @@ export default async function AdminPage() {
       </header>
 
       {/* Quick actions */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <QuickAction
+          href="/admin/clients"
+          icon={Building2}
+          title="Clients & assessments"
+          subtitle="Register · Scope · Set active engagement"
+        />
         <QuickAction
           href="/admin/engagement"
           icon={ClipboardCheck}
           title="Engagement metadata"
-          subtitle="Client, CAGE, dates, assessor, affirming official"
+          subtitle="Affirming officer · Dates · Classification"
         />
         <QuickAction
           href="/reports"
-          icon={Building2}
+          icon={ClipboardCheck}
           title="Generate exports"
           subtitle="Checklist · Affirmation · SSP · POA&M · Packet"
         />

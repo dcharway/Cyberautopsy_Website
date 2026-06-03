@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { Filter, Search, ChevronRight } from "lucide-react";
 import type { Control, ControlStatus, FamilyCode } from "@/lib/types";
+import type { EvidenceItem } from "@/lib/evidence-store";
+import type { POAMItem } from "@/lib/poam-store";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ControlDrawer } from "./ControlDrawer";
 import { FAMILY_NAMES } from "@/data/controls110";
@@ -11,6 +13,10 @@ import { cn } from "@/lib/utils";
 type Props = {
   controls: Control[];
   defaultFamily?: FamilyCode | "ALL";
+  canEdit?: boolean;
+  assessmentId?: string | null;
+  evidence?: EvidenceItem[];
+  poams?: POAMItem[];
 };
 
 const STATUS_FILTERS: (ControlStatus | "ALL")[] = [
@@ -22,11 +28,24 @@ const STATUS_FILTERS: (ControlStatus | "ALL")[] = [
   "Under Review"
 ];
 
-export function ControlTable({ controls, defaultFamily = "ALL" }: Props) {
+export function ControlTable({
+  controls: initialControls,
+  defaultFamily = "ALL",
+  canEdit = false,
+  assessmentId = null,
+  evidence = [],
+  poams = []
+}: Props) {
+  const [controls, setControls] = useState(initialControls);
   const [family, setFamily] = useState<FamilyCode | "ALL">(defaultFamily);
   const [status, setStatus] = useState<ControlStatus | "ALL">("ALL");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Control | null>(null);
+
+  function applyUpdate(controlId: string, patch: Partial<Control>) {
+    setControls((prev) => prev.map((c) => (c.id === controlId ? { ...c, ...patch } : c)));
+    setSelected((prev) => (prev && prev.id === controlId ? { ...prev, ...patch } : prev));
+  }
 
   const families = useMemo(() => {
     const set = new Set<FamilyCode>();
@@ -182,7 +201,15 @@ export function ControlTable({ controls, defaultFamily = "ALL" }: Props) {
         </table>
       </div>
 
-      <ControlDrawer control={selected} onClose={() => setSelected(null)} />
+      <ControlDrawer
+        control={selected}
+        onClose={() => setSelected(null)}
+        canEdit={canEdit}
+        assessmentId={assessmentId}
+        evidence={evidence.filter((e) => selected ? e.controlIds.includes(selected.id) : false)}
+        poam={selected ? poams.find((p) => p.controlId === selected.id) ?? null : null}
+        onUpdate={applyUpdate}
+      />
     </>
   );
 }

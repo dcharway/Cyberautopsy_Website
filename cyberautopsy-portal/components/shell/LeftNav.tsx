@@ -13,6 +13,7 @@ import {
   Settings,
   HelpCircle,
   Lock,
+  Building2,
   type LucideIcon
 } from "lucide-react";
 import { Mark } from "./Mark";
@@ -28,14 +29,15 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { href: "/dashboard",    label: "Overview",     icon: LayoutDashboard, count: null },
-  { href: "/controls",     label: "Controls",     icon: ListChecks,      count: 110 },
-  { href: "/evidence",     label: "Evidence",     icon: FolderArchive,   count: 92  },
-  { href: "/poam",         label: "POA&M",        icon: AlertOctagon,    count: 8   },
-  { href: "/assessments",  label: "Assessments",  icon: ClipboardCheck,  count: null },
-  { href: "/affirmations", label: "Affirmations", icon: ShieldCheck,     count: null },
-  { href: "/reports",      label: "Reports",      icon: FileBarChart,    count: null, adminOnly: true },
-  { href: "/admin",        label: "Admin",        icon: Settings,        count: null, adminOnly: true }
+  { href: "/dashboard",      label: "Overview",     icon: LayoutDashboard, count: null },
+  { href: "/admin/clients",  label: "Clients",      icon: Building2,       count: null, adminOnly: true },
+  { href: "/controls",       label: "Controls",     icon: ListChecks,      count: 110 },
+  { href: "/evidence",       label: "Evidence",     icon: FolderArchive,   count: null },
+  { href: "/poam",           label: "POA&M",        icon: AlertOctagon,    count: null },
+  { href: "/assessments",    label: "Assessments",  icon: ClipboardCheck,  count: null },
+  { href: "/affirmations",   label: "Affirmations", icon: ShieldCheck,     count: null },
+  { href: "/reports",        label: "Reports",      icon: FileBarChart,    count: null, adminOnly: true },
+  { href: "/admin",          label: "Admin",        icon: Settings,        count: null, adminOnly: true }
 ];
 
 export function LeftNav({ role = "viewer" }: { role?: Role }) {

@@ -1,8 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, FileText, AlertOctagon, History, MessageSquare, Paperclip, Upload, type LucideIcon } from "lucide-react";
-import type { Control } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import {
+  X,
+  FileText,
+  AlertOctagon,
+  History,
+  MessageSquare,
+  Paperclip,
+  Plus,
+  Check,
+  Save,
+  AlertCircle,
+  Lock,
+  type LucideIcon
+} from "lucide-react";
+import type { Control, ControlStatus } from "@/lib/types";
+import type { EvidenceItem } from "@/lib/evidence-store";
+import type { POAMItem } from "@/lib/poam-store";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
 
@@ -16,14 +32,38 @@ const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
   { key: "notes",    label: "Assessor Notes", icon: MessageSquare }
 ];
 
-export function ControlDrawer({
-  control,
-  onClose
-}: {
+const STATUS_OPTIONS: ControlStatus[] = [
+  "Implemented",
+  "Partial",
+  "Not Implemented",
+  "Not Applicable",
+  "Not Started",
+  "Under Review"
+];
+
+type Props = {
   control: Control | null;
   onClose: () => void;
-}) {
+  canEdit: boolean;
+  assessmentId: string | null;
+  evidence: EvidenceItem[];
+  poam: POAMItem | null;
+  onUpdate: (controlId: string, patch: Partial<Control>) => void;
+};
+
+export function ControlDrawer({
+  control,
+  onClose,
+  canEdit,
+  assessmentId,
+  evidence,
+  poam,
+  onUpdate
+}: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const open = control !== null;
 
   useEffect(() => {
@@ -33,6 +73,32 @@ export function ControlDrawer({
     if (open) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // Reset tab when switching controls
+  useEffect(() => {
+    if (open) setTab("overview");
+  }, [control?.id, open]);
+
+  async function patchControl(updates: Partial<Control>) {
+    if (!control || !canEdit) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/controls/${encodeURIComponent(control.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      onUpdate(control.id, updates);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -51,7 +117,7 @@ export function ControlDrawer({
         aria-modal="true"
         aria-label="Control detail"
         className={cn(
-          "fixed right-0 top-0 z-50 h-full w-full max-w-[560px] border-l border-gold-300/30 bg-ink-900 shadow-gilt transition-transform duration-300",
+          "fixed right-0 top-0 z-50 h-full w-full max-w-[640px] border-l border-gold-300/30 bg-ink-900 shadow-gilt transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full"
         )}
       >
@@ -92,6 +158,20 @@ export function ControlDrawer({
                   </span>
                 )}
               </div>
+
+              {!canEdit && (
+                <div className="mt-4 flex items-center gap-2 border border-ink-700 bg-ink-950 px-3 py-2 font-mono text-[10px] tracking-widest text-bone-400">
+                  <Lock size={11} />
+                  {assessmentId
+                    ? "READ-ONLY — Admin role required to edit."
+                    : "READ-ONLY — Set an active assessment in /admin/clients to enable edits."}
+                </div>
+              )}
+              {error && (
+                <div className="mt-4 flex items-center gap-2 border border-status-failed/60 bg-status-failedBg px-3 py-2 text-xs text-status-failed">
+                  <AlertCircle size={12} /> {error}
+                </div>
+              )}
             </header>
 
             {/* Tabs */}
@@ -120,21 +200,60 @@ export function ControlDrawer({
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6">
-              {tab === "overview" && <Overview control={control} />}
-              {tab === "evidence" && <Evidence control={control} />}
-              {tab === "poam" && <POAM control={control} />}
-              {tab === "history" && <HistoryTab />}
-              {tab === "notes" && <Notes />}
+              {tab === "overview" && (
+                <Overview control={control} canEdit={canEdit} onSave={patchControl} />
+              )}
+              {tab === "evidence" && (
+                <EvidenceTab
+                  control={control}
+                  canEdit={canEdit}
+                  evidence={evidence}
+                  assessmentId={assessmentId}
+                  onCreated={() => router.refresh()}
+                />
+              )}
+              {tab === "poam" && <POAMTab control={control} poam={poam} />}
+              {tab === "history" && <HistoryTab control={control} />}
+              {tab === "notes" && (
+                <NotesTab control={control} canEdit={canEdit} onSave={patchControl} />
+              )}
             </div>
 
             {/* Footer */}
-            <footer className="border-t border-ink-700 p-4 flex items-center justify-end gap-2">
-              <button className="border border-ink-700 px-3 py-1.5 text-xs text-bone-200 hover:border-bone-300">
-                Reassign owner
-              </button>
-              <button className="bg-gold-300 px-4 py-1.5 text-xs font-medium text-ink-950 hover:bg-gold-200">
-                Mark Implemented
-              </button>
+            <footer className="border-t border-ink-700 p-4 flex items-center justify-between gap-2">
+              <div className="font-mono text-[10px] tracking-widest text-bone-400">
+                {saving ? "SAVING…" : canEdit ? "EDITABLE" : "READ-ONLY"}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={!canEdit || saving}
+                  onClick={() => {
+                    const owner = prompt("New owner name:", control.owner ?? "");
+                    if (owner !== null) {
+                      void patchControl({
+                        owner,
+                        lastReviewed: new Date().toISOString().slice(0, 10)
+                      });
+                    }
+                  }}
+                  className="border border-ink-700 px-3 py-1.5 text-xs text-bone-200 hover:border-bone-300 disabled:opacity-50 disabled:hover:border-ink-700"
+                >
+                  Reassign owner
+                </button>
+                <button
+                  disabled={!canEdit || saving || control.status === "Implemented"}
+                  onClick={() =>
+                    patchControl({
+                      status: "Implemented",
+                      lastReviewed: new Date().toISOString().slice(0, 10)
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 bg-gold-300 px-4 py-1.5 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-50 disabled:hover:bg-gold-300"
+                >
+                  <Check size={12} />
+                  {control.status === "Implemented" ? "Implemented" : "Mark Implemented"}
+                </button>
+              </div>
             </footer>
           </div>
         )}
@@ -143,20 +262,57 @@ export function ControlDrawer({
   );
 }
 
-function Overview({ control }: { control: Control }) {
+/* ---------- tabs ---------- */
+
+function Overview({
+  control,
+  canEdit,
+  onSave
+}: {
+  control: Control;
+  canEdit: boolean;
+  onSave: (patch: Partial<Control>) => Promise<void>;
+}) {
+  const [status, setStatus] = useState<ControlStatus>(control.status);
+  const [narrative, setNarrative] = useState(control.narrative ?? "");
+
+  useEffect(() => {
+    setStatus(control.status);
+    setNarrative(control.narrative ?? "");
+  }, [control.id, control.status, control.narrative]);
+
+  const dirty = status !== control.status || narrative !== (control.narrative ?? "");
+
   return (
     <div className="space-y-6">
       <Section title="Requirement">
         <p className="text-sm leading-relaxed text-bone-200">{control.requirement}</p>
       </Section>
 
+      <Section title="Implementation status">
+        <div className="flex items-center gap-2">
+          <select
+            disabled={!canEdit}
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ControlStatus)}
+            className="border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-bone-100 focus:border-gold-300 focus:outline-none disabled:opacity-60"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+      </Section>
+
       <Section title="Implementation narrative">
-        <p className="text-sm text-bone-300">
-          {control.narrative ?? "No narrative authored yet. Required for SSP Appendix D submission."}
-        </p>
-        <button className="mt-3 border border-ink-700 px-3 py-1.5 text-xs text-bone-200 hover:border-gold-300 hover:text-gold-100">
-          + Add narrative
-        </button>
+        <textarea
+          disabled={!canEdit}
+          rows={5}
+          value={narrative}
+          placeholder={canEdit ? "Author the implementation narrative used in SSP Appendix D…" : "No narrative authored yet."}
+          onChange={(e) => setNarrative(e.target.value)}
+          className="w-full border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-bone-100 placeholder:text-bone-500 focus:border-gold-300 focus:outline-none disabled:opacity-60"
+        />
       </Section>
 
       <Section title="Assessment objectives (NIST 800-171A)">
@@ -169,84 +325,254 @@ function Overview({ control }: { control: Control }) {
           ))}
         </ul>
       </Section>
+
+      {canEdit && (
+        <div className="flex items-center justify-end gap-2 border-t border-ink-700 pt-4">
+          <button
+            disabled={!dirty}
+            onClick={() =>
+              onSave({
+                status,
+                narrative,
+                lastReviewed: new Date().toISOString().slice(0, 10)
+              })
+            }
+            className="inline-flex items-center gap-2 bg-gold-300 px-4 py-2 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-50 disabled:hover:bg-gold-300"
+          >
+            <Save size={12} /> Save overview
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function Evidence({ control }: { control: Control }) {
+function EvidenceTab({
+  control,
+  canEdit,
+  evidence,
+  assessmentId,
+  onCreated
+}: {
+  control: Control;
+  canEdit: boolean;
+  evidence: EvidenceItem[];
+  assessmentId: string | null;
+  onCreated: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+  const sixMonths = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [form, setForm] = useState({
+    name: "",
+    type: "Config Export" as EvidenceItem["type"],
+    fileName: "",
+    system: "",
+    owner: "",
+    collected: today,
+    expires: sixMonths,
+    location: "",
+    notes: ""
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!assessmentId) {
+      setErr("No active assessment");
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/evidence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assessmentId,
+          controlIds: [control.id],
+          family: control.family,
+          status: "Valid",
+          ...form
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setShowForm(false);
+      setForm({
+        name: "",
+        type: "Config Export",
+        fileName: "",
+        system: "",
+        owner: "",
+        collected: today,
+        expires: sixMonths,
+        location: "",
+        notes: ""
+      });
+      onCreated();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const statusFmt = (s: EvidenceItem["status"]) =>
+    s === "Valid" ? "text-status-met" : s === "Expiring Soon" ? "text-status-partial" : "text-status-failed";
+
   return (
     <div className="space-y-5">
-      <Section title="Linked artifacts">
-        {control.evidenceIds.length > 0 ? (
+      <Section title={`Linked artifacts (${evidence.length})`}>
+        {evidence.length > 0 ? (
           <ul className="divide-y divide-ink-700 border border-ink-700">
-            {control.evidenceIds.map((id) => (
-              <li key={id} className="flex items-center justify-between gap-3 p-3">
-                <div>
-                  <div className="font-mono text-xs text-bone-100">{id}</div>
-                  <div className="text-[11px] text-bone-400">
-                    Config Export · collected 2026-05-10 · expires 2026-11-10
+            {evidence.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-bone-100">{e.id}</span>
+                    <span className="font-mono text-[10px] text-bone-400">{e.name}</span>
                   </div>
+                  <div className="mt-0.5 text-[11px] text-bone-400">
+                    {e.type} · {e.system} · collected {e.collected}
+                    {e.expires ? ` · expires ${e.expires}` : ""}
+                  </div>
+                  {e.location && (
+                    <a
+                      href={e.location.startsWith("http") ? e.location : undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block truncate font-mono text-[10px] text-gold-300 hover:text-gold-100"
+                    >
+                      {e.location}
+                    </a>
+                  )}
                 </div>
-                <span className="font-mono text-[10px] tracking-widest2 text-status-met">VALID</span>
+                <span className={`font-mono text-[10px] tracking-widest2 ${statusFmt(e.status)}`}>
+                  {e.status.toUpperCase()}
+                </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-bone-400">No artifacts linked. Required at audit.</p>
+          <p className="text-sm text-bone-400">No artifacts linked yet.</p>
         )}
       </Section>
 
-      <div className="border border-dashed border-ink-700 p-6 text-center">
-        <Upload size={20} className="mx-auto text-bone-400" />
-        <p className="mt-2 text-sm text-bone-200">Drop a file or browse</p>
-        <p className="mt-1 text-[11px] text-bone-400">
-          Auto-renamed: {control.id}_artifact_YYYY-MM-DD.ext
-        </p>
-      </div>
+      {canEdit && !showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 border border-gold-300/40 bg-gold-300/5 px-3 py-2 text-xs text-gold-100 hover:bg-gold-300 hover:text-ink-950"
+        >
+          <Plus size={12} /> Add evidence record
+        </button>
+      )}
+
+      {canEdit && showForm && (
+        <form onSubmit={submit} className="space-y-3 border border-ink-700 bg-ink-950 p-4">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">
+            New evidence for {control.id}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldInput label="Name *"     value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
+            <FieldSelect label="Type"      value={form.type} onChange={(v) => setForm({ ...form, type: v as EvidenceItem["type"] })} options={["Config Export", "Screenshot", "Policy Doc", "Log Sample", "Interview", "Other"]} />
+            <FieldInput label="File name *" value={form.fileName} onChange={(v) => setForm({ ...form, fileName: v })} required placeholder={`${control.id}_artifact_${today}.pdf`} />
+            <FieldInput label="System / tool *" value={form.system} onChange={(v) => setForm({ ...form, system: v })} required />
+            <FieldInput label="Owner *"    value={form.owner} onChange={(v) => setForm({ ...form, owner: v })} required />
+            <FieldInput label="Collected *" type="date" value={form.collected} onChange={(v) => setForm({ ...form, collected: v })} required />
+            <FieldInput label="Expires"    type="date" value={form.expires} onChange={(v) => setForm({ ...form, expires: v })} />
+            <FieldInput label="Location (URL or path)" value={form.location} onChange={(v) => setForm({ ...form, location: v })} full />
+            <FieldTextarea label="Notes" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} full rows={2} />
+          </div>
+          {err && (
+            <div className="flex items-center gap-2 border border-status-failed/60 bg-status-failedBg px-3 py-2 text-xs text-status-failed">
+              <AlertCircle size={12} /> {err}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="border border-ink-700 px-3 py-1.5 text-xs text-bone-200 hover:border-bone-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 bg-gold-300 px-4 py-1.5 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-60"
+            >
+              <Plus size={12} /> {saving ? "Saving…" : "Create artifact"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
 
-function POAM({ control }: { control: Control }) {
-  if (!control.poamId) {
-    return <p className="text-sm text-bone-400">No POA&M open against this control.</p>;
+function POAMTab({ control, poam }: { control: Control; poam: POAMItem | null }) {
+  if (!poam) {
+    return (
+      <p className="text-sm text-bone-400">
+        No POA&amp;M open against this control. Open <strong className="text-bone-200">/poam</strong> to register one.
+      </p>
+    );
   }
   return (
     <div className="space-y-5">
       <Section title="POA&M item">
         <div className="border border-ink-700 bg-ink-950 p-4">
           <div className="flex items-baseline justify-between">
-            <span className="font-mono text-xs text-gold-300">{control.poamId}</span>
-            <span className="font-mono text-[10px] tracking-widest2 text-status-partial">IN REMEDIATION</span>
+            <span className="font-mono text-xs text-gold-300">{poam.id}</span>
+            <span className="font-mono text-[10px] tracking-widest2 text-status-partial">
+              {poam.status.toUpperCase()}
+            </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <Field k="Risk" v="Medium" />
-            <Field k="Owner" v={control.owner ?? "—"} />
-            <Field k="Opened" v="2026-04-02" />
-            <Field k="Closes by" v="2026-07-31" />
+            <Field k="Risk" v={poam.risk} />
+            <Field k="Owner" v={poam.owner} />
+            <Field k="Opened" v={poam.opened} />
+            <Field k="Closes by" v={poam.scheduledClose} />
+          </div>
+          <div className="mt-4 border-t border-ink-700 pt-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
+              Weakness
+            </div>
+            <p className="mt-1 text-sm text-bone-200">{poam.weakness}</p>
           </div>
           <div className="mt-4 border-t border-ink-700 pt-3">
             <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
               Remediation plan
             </div>
-            <p className="mt-1 text-sm text-bone-200">
-              Roll forward configuration baseline to the CIS Benchmark v3. Re-scan 10% sample,
-              capture exports, mark control Implemented after verification.
-            </p>
+            <p className="mt-1 text-sm text-bone-200">{poam.remediationPlan}</p>
           </div>
         </div>
       </Section>
+      <p className="text-xs text-bone-400">
+        Linked control: {control.id}. Full edit + history available at <strong className="text-bone-200">/poam</strong>.
+      </p>
     </div>
   );
 }
 
-function HistoryTab() {
-  const items = [
-    { d: "2026-05-12", who: "J. Smith",   what: "Status changed from Partial → Implemented" },
-    { d: "2026-04-28", who: "R. Vasquez", what: "Evidence EVD-AC-014 attached" },
-    { d: "2026-04-02", who: "M. Okafor",  what: "POA&M-014 created (Medium risk)" },
-    { d: "2026-03-15", who: "A. Sterling",what: "Owner assigned to J. Smith" }
-  ];
+function HistoryTab({ control }: { control: Control }) {
+  const items: Array<{ d: string; who: string; what: string }> = [];
+  if (control.lastReviewed) {
+    items.push({
+      d: control.lastReviewed,
+      who: control.owner ?? "system",
+      what: `Status: ${control.status}`
+    });
+  }
+  if (items.length === 0) {
+    return <p className="text-sm text-bone-400">No edits recorded for this assessment yet.</p>;
+  }
   return (
     <ol className="relative border-l border-ink-700">
       {items.map((i, idx) => (
@@ -260,28 +586,70 @@ function HistoryTab() {
   );
 }
 
-function Notes() {
+function NotesTab({
+  control,
+  canEdit,
+  onSave
+}: {
+  control: Control;
+  canEdit: boolean;
+  onSave: (patch: Partial<Control>) => Promise<void>;
+}) {
+  // Assessor notes live on the override record. We surface them via the control
+  // narrative field for now and add a separate assessorNotes field on save.
+  const [draft, setDraft] = useState("");
+
+  async function append() {
+    if (!draft.trim()) return;
+    // Patch flow: stick the note in the narrative with a timestamp prefix so
+    // it's preserved on the SSP-D export, and clear the input.
+    const stamp = new Date().toISOString().slice(0, 10);
+    const existing = control.narrative ?? "";
+    const next = existing
+      ? `${existing}\n\n[Note ${stamp}] ${draft.trim()}`
+      : `[Note ${stamp}] ${draft.trim()}`;
+    await onSave({ narrative: next });
+    setDraft("");
+  }
+
   return (
     <div className="space-y-4">
-      <div className="border border-ink-700 bg-ink-950 p-4">
-        <div className="font-mono text-[10px] tracking-widest2 text-status-review">VERITAS CYBER · K. PRESCOTT</div>
-        <p className="mt-2 text-sm text-bone-200">
-          Need configuration export dated within 6 months. Current screenshot is 14 months old.
-          Treating as outstanding until refreshed.
+      {control.narrative ? (
+        <div className="border border-ink-700 bg-ink-950 p-4">
+          <div className="font-mono text-[10px] tracking-widest2 text-bone-400">CURRENT NARRATIVE / NOTES</div>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-bone-200">{control.narrative}</p>
+        </div>
+      ) : (
+        <p className="text-sm text-bone-400">No notes yet.</p>
+      )}
+
+      {canEdit ? (
+        <>
+          <textarea
+            rows={3}
+            value={draft}
+            placeholder="Append an assessor note…"
+            onChange={(e) => setDraft(e.target.value)}
+            className="w-full border border-ink-700 bg-ink-950 p-3 text-sm text-bone-100 placeholder:text-bone-400 focus:border-gold-300 focus:outline-none"
+          />
+          <button
+            disabled={!draft.trim()}
+            onClick={() => void append()}
+            className="bg-gold-300 px-4 py-2 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-60"
+          >
+            Append note →
+          </button>
+        </>
+      ) : (
+        <p className="font-mono text-[10px] tracking-widest text-bone-400">
+          ADMIN REQUIRED TO APPEND.
         </p>
-        <div className="mt-3 font-mono text-[10px] text-bone-400">2026-05-09 · 14:32 EDT</div>
-      </div>
-      <textarea
-        rows={3}
-        placeholder="Reply to assessor…"
-        className="w-full border border-ink-700 bg-ink-950 p-3 text-sm text-bone-100 placeholder:text-bone-400 focus:border-gold-300 focus:outline-none"
-      />
-      <button className="bg-gold-300 px-4 py-2 text-xs font-medium text-ink-950 hover:bg-gold-200">
-        Send reply →
-      </button>
+      )}
     </div>
   );
 }
+
+/* ---------- form primitives ---------- */
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -298,5 +666,92 @@ function Field({ k, v }: { k: string; v: string }) {
       <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">{k}</div>
       <div className="mt-1 text-bone-100">{v}</div>
     </div>
+  );
+}
+
+function FieldInput({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  required = false,
+  full = false
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: "text" | "date" | "number";
+  placeholder?: string;
+  required?: boolean;
+  full?: boolean;
+}) {
+  return (
+    <label className={full ? "sm:col-span-2" : undefined}>
+      <span className="text-[11px] uppercase tracking-widest text-bone-400">{label}</span>
+      <input
+        type={type}
+        value={value}
+        required={required}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-bone-100 placeholder:text-bone-500 focus:border-gold-300 focus:outline-none"
+      />
+    </label>
+  );
+}
+
+function FieldTextarea({
+  label,
+  value,
+  onChange,
+  rows = 3,
+  full = false
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows?: number;
+  full?: boolean;
+}) {
+  return (
+    <label className={full ? "sm:col-span-2" : undefined}>
+      <span className="text-[11px] uppercase tracking-widest text-bone-400">{label}</span>
+      <textarea
+        value={value}
+        rows={rows}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-bone-100 placeholder:text-bone-500 focus:border-gold-300 focus:outline-none"
+      />
+    </label>
+  );
+}
+
+function FieldSelect({
+  label,
+  value,
+  onChange,
+  options,
+  full = false
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  full?: boolean;
+}) {
+  return (
+    <label className={full ? "sm:col-span-2" : undefined}>
+      <span className="text-[11px] uppercase tracking-widest text-bone-400">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-bone-100 focus:border-gold-300 focus:outline-none"
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </label>
   );
 }
