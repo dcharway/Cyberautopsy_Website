@@ -99,21 +99,36 @@ export async function loadStore(): Promise<Store> {
   const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "admin@cyberautopsy.org").toLowerCase();
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
   const ADMIN_TOTP_SECRET = process.env.ADMIN_TOTP_SECRET || DEMO_TOTP_SECRET;
-  if (ADMIN_PASSWORD && !cache.users[ADMIN_EMAIL]) {
-    cache.users[ADMIN_EMAIL] = {
-      email: ADMIN_EMAIL,
-      passwordHash: hashPassword(ADMIN_PASSWORD),
-      totpSecret: ADMIN_TOTP_SECRET,
-      totpEnrolled: true,
-      webauthn: [],
-      currentChallenge: null,
-      passwordResetTokenHash: null,
-      passwordResetExpires: null,
-      role: "admin",
-      createdAt: new Date().toISOString()
-    };
-    await persist();
-    console.warn(`[auth/store] Seeded admin user: ${ADMIN_EMAIL}`);
+  if (ADMIN_PASSWORD) {
+    const existing = cache.users[ADMIN_EMAIL];
+    if (!existing) {
+      cache.users[ADMIN_EMAIL] = {
+        email: ADMIN_EMAIL,
+        passwordHash: hashPassword(ADMIN_PASSWORD),
+        totpSecret: ADMIN_TOTP_SECRET,
+        totpEnrolled: true,
+        webauthn: [],
+        currentChallenge: null,
+        passwordResetTokenHash: null,
+        passwordResetExpires: null,
+        role: "admin",
+        createdAt: new Date().toISOString()
+      };
+      await persist();
+      console.warn(`[auth/store] Seeded admin user: ${ADMIN_EMAIL}`);
+    } else {
+      // Env var is source of truth — if the stored hash no longer matches
+      // the current ADMIN_PASSWORD, re-hash. Without this, changing the
+      // env var has no effect because the user record already exists.
+      if (!verifyPassword(ADMIN_PASSWORD, existing.passwordHash)) {
+        existing.passwordHash = hashPassword(ADMIN_PASSWORD);
+        existing.role = "admin";
+        existing.totpSecret = ADMIN_TOTP_SECRET;
+        existing.totpEnrolled = true;
+        await persist();
+        console.warn(`[auth/store] Updated admin user password from env: ${ADMIN_EMAIL}`);
+      }
+    }
   }
 
   // Backfill new fields on existing users so old stores stay compatible.
