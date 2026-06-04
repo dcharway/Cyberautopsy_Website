@@ -207,12 +207,29 @@ At this point, **http://cyberautopsy.org** should load the marketing site (HTTP 
 
 ## 7. SSL with Let's Encrypt
 
+Run the helper — it requests a single cert whose SAN list covers the apex, www, and portal hostnames, then validates and reloads Nginx:
+
 ```bash
-sudo certbot --nginx -d cyberautopsy.org -d www.cyberautopsy.org -d portal.cyberautopsy.org \
-  --redirect --agree-tos --email you@cyberautopsy.org --no-eff-email
+sudo bash deploy/ssl-expand.sh
 ```
 
-Certbot edits the Nginx configs in place — adds the SSL certificate paths and an HTTP→HTTPS redirect block. Renewals run automatically via the `certbot.timer` systemd unit (`systemctl status certbot.timer`).
+(Override the Let's Encrypt registration email with `EMAIL=you@example.com sudo bash deploy/ssl-expand.sh`.)
+
+The helper wraps:
+
+```bash
+sudo certbot --nginx \
+  -d www.cyberautopsy.org \
+  -d cyberautopsy.org \
+  -d portal.cyberautopsy.org \
+  --expand --redirect --non-interactive --agree-tos -m you@cyberautopsy.org
+```
+
+`--expand` is the load-bearing flag: if a cert already exists that covers a subset of the names (e.g. only `www.` + `portal.`), certbot extends the existing lineage rather than orphaning it with a fresh one. Use it on both the initial issuance and any future hostname additions.
+
+The apex (`cyberautopsy.org`) doesn't serve the app directly — `deploy/nginx-cyberautopsy.org.conf` defines a dedicated 443 server block that 301-redirects it to `https://www.cyberautopsy.org$request_uri`, so SEO + analytics stay on the canonical host.
+
+Renewals run automatically via the `certbot.timer` systemd unit (`systemctl status certbot.timer`).
 
 Test renewal:
 
