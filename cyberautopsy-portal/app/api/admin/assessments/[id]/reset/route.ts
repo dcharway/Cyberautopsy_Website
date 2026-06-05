@@ -23,6 +23,7 @@ import { getAssessment, updateAssessment } from "@/lib/assessments";
 import { clearPOAMs } from "@/lib/poam-store";
 import { clearEvidence } from "@/lib/evidence-store";
 import { clearAssessmentOverrides } from "@/lib/control-state";
+import { clearPreCMMC } from "@/lib/precmmc-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,11 +53,13 @@ export async function POST(req: Request, { params }: RouteParams) {
   const resetBy = req.headers.get("x-cyber-user") ?? "admin";
 
   // Wipe per-assessment stores in parallel. The seed control framework + the
-  // assessment metadata itself are never touched.
+  // assessment metadata itself are never touched. Pre-CMMC checklist state +
+  // its uploaded artifact bytes are wiped along with the rest.
   await Promise.all([
     clearPOAMs(params.id),
     clearEvidence(params.id),
-    clearAssessmentOverrides(params.id)
+    clearAssessmentOverrides(params.id),
+    clearPreCMMC(params.id)
   ]);
 
   // Stamp a reset note on the assessment so the audit trail records what
@@ -77,8 +80,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     assessmentId: params.id,
     resetAt: new Date().toISOString(),
     resetBy,
-    cleared: { poams: true, evidence: true, controlOverrides: true },
-    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true },
+    cleared: { poams: true, evidence: true, controlOverrides: true, precmmcChecklist: true },
+    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true, precmmcSchema: true },
     assessment: stamped
   });
 }

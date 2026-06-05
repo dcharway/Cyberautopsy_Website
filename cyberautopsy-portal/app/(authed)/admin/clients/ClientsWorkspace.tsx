@@ -671,6 +671,7 @@ function ResetAssessmentDialog({
               <li>All POA&amp;M items + their edit history</li>
               <li>All evidence records linked to controls</li>
               <li>Control overrides — status, owner, narrative, assessor notes, acceptable-evidence review checkboxes</li>
+              <li>Pre-CMMC checklist answers + every uploaded diagram / evidence file</li>
             </ul>
           </div>
           <div className="border border-ink-700 bg-ink-950 p-3">
@@ -681,7 +682,7 @@ function ResetAssessmentDialog({
               <li>The 110-control NIST 800-171 framework</li>
               <li>Assessment metadata: dates, reporting period, classification, assessor, affirming officer</li>
               <li>Client record + all other clients/assessments</li>
-              <li>Acceptable-evidence catalog (per-control templates)</li>
+              <li>Acceptable-evidence catalog + Pre-CMMC checklist schema (templates)</li>
             </ul>
           </div>
         </div>
