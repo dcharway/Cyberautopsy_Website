@@ -46,7 +46,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       lastReviewed: body.lastReviewed,
       narrative: body.narrative,
       assessorNotes: body.assessorNotes,
-      poamId: body.poamId
+      poamId: body.poamId,
+      acceptableEvidenceReviewed: Array.isArray(body.acceptableEvidenceReviewed)
+        ? body.acceptableEvidenceReviewed
+        : undefined
     },
     updatedBy
   );

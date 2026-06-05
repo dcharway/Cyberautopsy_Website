@@ -13,6 +13,7 @@ import {
   Calendar,
   ShieldCheck,
   AlertCircle,
+  RotateCcw,
   X
 } from "lucide-react";
 import type { Client } from "@/lib/clients";
@@ -34,6 +35,7 @@ export function ClientsWorkspace({ initialClients, initialAssessments, initialAc
   const [openClientId, setOpenClientId] = useState<string | null>(initialActive.clientId);
   const [showNewClient, setShowNewClient] = useState(false);
   const [newAssessmentForClientId, setNewAssessmentForClientId] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<{ client: Client; assessment: Assessment } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -275,6 +277,15 @@ export function ClientsWorkspace({ initialClients, initialAssessments, initialAc
                                 )}
                                 {a.status !== "Archived" && (
                                   <button
+                                    onClick={() => setResetTarget({ client, assessment: a })}
+                                    title="Reset assessment to a clean baseline"
+                                    className="text-bone-400 hover:text-status-partial"
+                                  >
+                                    <RotateCcw size={13} />
+                                  </button>
+                                )}
+                                {a.status !== "Archived" && (
+                                  <button
                                     onClick={() => archiveAssessment(a.id)}
                                     title="Archive"
                                     className="text-bone-400 hover:text-status-failed"
@@ -336,6 +347,18 @@ export function ClientsWorkspace({ initialClients, initialAssessments, initialAc
             setNewAssessmentForClientId(null);
             // Auto-activate the new assessment
             void setActiveClient(assessment.clientId, assessment.id);
+          }}
+        />
+      )}
+
+      {resetTarget && (
+        <ResetAssessmentDialog
+          client={resetTarget.client}
+          assessment={resetTarget.assessment}
+          onClose={() => setResetTarget(null)}
+          onComplete={() => {
+            setResetTarget(null);
+            refresh();
           }}
         />
       )}
@@ -578,6 +601,119 @@ function NewAssessmentDialog({
             className="inline-flex items-center gap-2 bg-gold-300 px-4 py-2 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-60"
           >
             {saving ? "Saving…" : "Create + set active"}
+          </button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
+
+/* ---------- Reset assessment dialog ---------- */
+
+function ResetAssessmentDialog({
+  client,
+  assessment,
+  onClose,
+  onComplete
+}: {
+  client: Client;
+  assessment: Assessment;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const confirmPhrase = `RESET ${assessment.reportingPeriod}`;
+  const [typed, setTyped] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const phraseMatches = typed.trim() === confirmPhrase;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!phraseMatches) return;
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/assessments/${assessment.id}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: assessment.id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Reset failed");
+      onComplete();
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Reset failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog title="Reset assessment to clean baseline" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <div className="border border-status-failed/40 bg-status-failedBg/30 p-4">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-status-failed">
+            DESTRUCTIVE ACTION
+          </div>
+          <p className="mt-2 text-sm text-bone-100">
+            This wipes every data input recorded against{" "}
+            <strong className="text-bone-50">{client.organization} · {assessment.reportingPeriod}</strong>{" "}
+            and returns it to a clean baseline.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="border border-ink-700 bg-ink-950 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-status-failed">
+              WILL BE WIPED
+            </div>
+            <ul className="mt-2 list-disc pl-4 text-xs text-bone-200 space-y-1">
+              <li>All POA&amp;M items + their edit history</li>
+              <li>All evidence records linked to controls</li>
+              <li>Control overrides — status, owner, narrative, assessor notes, acceptable-evidence review checkboxes</li>
+            </ul>
+          </div>
+          <div className="border border-ink-700 bg-ink-950 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-status-met">
+              WILL BE PRESERVED
+            </div>
+            <ul className="mt-2 list-disc pl-4 text-xs text-bone-200 space-y-1">
+              <li>The 110-control NIST 800-171 framework</li>
+              <li>Assessment metadata: dates, reporting period, classification, assessor, affirming officer</li>
+              <li>Client record + all other clients/assessments</li>
+              <li>Acceptable-evidence catalog (per-control templates)</li>
+            </ul>
+          </div>
+        </div>
+
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-widest text-bone-400">
+            To confirm, type{" "}
+            <code className="font-mono text-status-failed">{confirmPhrase}</code>
+          </span>
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            className="mt-1.5 w-full border border-ink-700 bg-ink-950 px-3 py-2 font-mono text-sm text-bone-100 focus:border-status-failed focus:outline-none"
+          />
+        </label>
+
+        {err && (
+          <div className="flex items-center gap-2 border border-status-failed/60 bg-status-failedBg px-3 py-2 text-xs text-status-failed">
+            <AlertCircle size={12} /> {err}
+          </div>
+        )}
+
+        <DialogActions onClose={onClose}>
+          <button
+            type="submit"
+            disabled={!phraseMatches || submitting}
+            className="inline-flex items-center gap-2 bg-status-failed px-4 py-2 text-xs font-medium text-bone-50 hover:bg-status-failed/80 disabled:opacity-50"
+          >
+            <RotateCcw size={12} /> {submitting ? "Resetting…" : "Reset to clean baseline"}
           </button>
         </DialogActions>
       </form>

@@ -213,6 +213,17 @@ export async function updatePOAM(
   return next;
 }
 
+/**
+ * Wipe every POA&M for one assessment. Used by the "Reset assessment" admin
+ * action. We persist an explicit empty file so the next `ensureLoaded` reads
+ * valid JSON and does NOT re-seed the demo POA&M set — even on the seeded
+ * demo assessment, a reset means a clean slate.
+ */
+export async function clearPOAMs(assessmentId: string): Promise<void> {
+  cache.set(assessmentId, { items: {} });
+  await persist(assessmentId);
+}
+
 export async function archivePOAM(
   assessmentId: string,
   id: string,

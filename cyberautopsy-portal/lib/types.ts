@@ -25,6 +25,10 @@ export type Control = {
   systemBoundary: string;
   lastReviewed?: string;
   narrative?: string;
+  // Subset of EVIDENCE_CATALOG[control.id].artifacts that the assessor has
+  // marked as collected / reviewed for the active assessment. Projected onto
+  // the merged Control by lib/control-state.ts; not present on seed data.
+  acceptableEvidenceReviewed?: string[];
 };
 
 export type Evidence = {

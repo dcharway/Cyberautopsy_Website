@@ -117,6 +117,16 @@ export async function updateEvidence(
   return next;
 }
 
+/**
+ * Wipe every evidence record for one assessment. Used by the "Reset
+ * assessment" admin action. Evidence store has no seed; an empty file is
+ * indistinguishable from never-written.
+ */
+export async function clearEvidence(assessmentId: string): Promise<void> {
+  cache.set(assessmentId, { items: {} });
+  await persist(assessmentId);
+}
+
 export async function archiveEvidence(assessmentId: string, id: string): Promise<void> {
   const store = await ensureLoaded(assessmentId);
   const existing = store.items[id];

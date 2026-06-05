@@ -24,6 +24,10 @@ export type ControlOverride = {
   narrative?: string;
   assessorNotes?: string;
   poamId?: string | null;
+  // CMMC acceptable-evidence catalog — which canonical artifacts the assessor
+  // has confirmed they have seen / collected for this assessment. Strings are
+  // the artifact labels from data/evidence-catalog.ts.
+  acceptableEvidenceReviewed?: string[];
   updatedAt: string;
   updatedBy: string;
 };
@@ -104,9 +108,29 @@ export async function mergedControls(assessmentId: string | null): Promise<Contr
       owner: o.owner ?? c.owner,
       lastReviewed: o.lastReviewed ?? c.lastReviewed,
       narrative: o.narrative ?? c.narrative,
-      poamId: o.poamId !== undefined ? o.poamId : c.poamId
+      poamId: o.poamId !== undefined ? o.poamId : c.poamId,
+      acceptableEvidenceReviewed: o.acceptableEvidenceReviewed
     };
   });
+}
+
+/**
+ * Wipe every override for one assessment. Used by the "Reset assessment"
+ * admin action. The seed CONTROLS[] framework is never touched — only the
+ * per-assessment override layer is deleted, so the 110-control structure
+ * remains intact and the next read returns a fresh baseline.
+ */
+export async function clearAssessmentOverrides(assessmentId: string): Promise<void> {
+  cache.set(assessmentId, { overrides: {} });
+  if (!writableFs) return;
+  try {
+    await fs.unlink(pathFor(assessmentId));
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") {
+      throw err;
+    }
+  }
 }
 
 async function persist(assessmentId: string): Promise<void> {

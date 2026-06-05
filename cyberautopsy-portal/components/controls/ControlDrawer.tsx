@@ -21,6 +21,7 @@ import type { EvidenceItem } from "@/lib/evidence-store";
 import type { POAMItem } from "@/lib/poam-store";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
+import { getCatalogEntry } from "@/data/evidence-catalog";
 
 type Tab = "overview" | "evidence" | "poam" | "history" | "notes";
 
@@ -209,6 +210,13 @@ export function ControlDrawer({
                   canEdit={canEdit}
                   evidence={evidence}
                   assessmentId={assessmentId}
+                  reviewed={control.acceptableEvidenceReviewed ?? []}
+                  onSaveReview={(next) =>
+                    patchControl({
+                      acceptableEvidenceReviewed: next,
+                      lastReviewed: new Date().toISOString().slice(0, 10)
+                    })
+                  }
                   onCreated={() => router.refresh()}
                 />
               )}
@@ -352,14 +360,19 @@ function EvidenceTab({
   canEdit,
   evidence,
   assessmentId,
+  reviewed,
+  onSaveReview,
   onCreated
 }: {
   control: Control;
   canEdit: boolean;
   evidence: EvidenceItem[];
   assessmentId: string | null;
+  reviewed: string[];
+  onSaveReview: (next: string[]) => Promise<void>;
   onCreated: () => void;
 }) {
+  const catalog = getCatalogEntry(control.id);
   const [showForm, setShowForm] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const sixMonths = (() => {
@@ -428,6 +441,15 @@ function EvidenceTab({
 
   return (
     <div className="space-y-5">
+      {catalog && (
+        <AcceptableEvidenceChecklist
+          catalog={catalog}
+          reviewed={reviewed}
+          canEdit={canEdit}
+          onSave={onSaveReview}
+        />
+      )}
+
       <Section title={`Linked artifacts (${evidence.length})`}>
         {evidence.length > 0 ? (
           <ul className="divide-y divide-ink-700 border border-ink-700">
@@ -558,6 +580,129 @@ function POAMTab({ control, poam }: { control: Control; poam: POAMItem | null })
         Linked control: {control.id}. Full edit + history available at <strong className="text-bone-200">/poam</strong>.
       </p>
     </div>
+  );
+}
+
+function AcceptableEvidenceChecklist({
+  catalog,
+  reviewed,
+  canEdit,
+  onSave
+}: {
+  catalog: { cmmcLabel: string; artifacts: string[]; justification: string };
+  reviewed: string[];
+  canEdit: boolean;
+  onSave: (next: string[]) => Promise<void>;
+}) {
+  const [local, setLocal] = useState<string[]>(reviewed);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocal(reviewed);
+  }, [reviewed.join("|")]);
+
+  const dirty = local.length !== reviewed.length || local.some((x) => !reviewed.includes(x));
+  const covered = local.length;
+  const total = catalog.artifacts.length;
+  const pct = total === 0 ? 0 : Math.round((covered / total) * 100);
+
+  function toggle(item: string) {
+    setLocal((prev) =>
+      prev.includes(item) ? prev.filter((p) => p !== item) : [...prev, item]
+    );
+  }
+
+  async function save() {
+    setSaving(true);
+    setErr(null);
+    try {
+      await onSave(local);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="border border-gold-300/30 bg-ink-950 p-4">
+      <header className="flex items-baseline justify-between gap-3">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">
+            ACCEPTABLE EVIDENCE · {catalog.cmmcLabel}
+          </div>
+          <h3 className="mt-1 text-sm text-bone-100">
+            Canonical artifacts to support a passing assessment objective
+          </h3>
+        </div>
+        <span
+          className={cn(
+            "font-mono text-[10px] tracking-widest2 border px-2 py-0.5",
+            covered === total
+              ? "border-status-met/60 text-status-met"
+              : covered === 0
+              ? "border-ink-600 text-bone-400"
+              : "border-status-partial/60 text-status-partial"
+          )}
+        >
+          {covered}/{total} · {pct}%
+        </span>
+      </header>
+
+      <ul className="mt-3 space-y-1.5">
+        {catalog.artifacts.map((artifact) => {
+          const checked = local.includes(artifact);
+          return (
+            <li key={artifact}>
+              <label
+                className={cn(
+                  "flex items-start gap-2 border px-3 py-2 transition",
+                  checked
+                    ? "border-status-met/40 bg-status-metBg/40"
+                    : "border-ink-700 bg-ink-900",
+                  canEdit ? "cursor-pointer hover:border-gold-300/40" : "cursor-not-allowed opacity-90"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  disabled={!canEdit}
+                  checked={checked}
+                  onChange={() => toggle(artifact)}
+                  className="mt-0.5 h-3.5 w-3.5 accent-gold-300"
+                />
+                <span className="text-sm text-bone-100">{artifact}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-3 border-t border-ink-700 pt-3">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
+          Why these artifacts are sufficient
+        </div>
+        <p className="mt-1 text-sm leading-snug text-bone-200">{catalog.justification}</p>
+      </div>
+
+      {err && (
+        <div className="mt-3 flex items-center gap-2 border border-status-failed/60 bg-status-failedBg px-3 py-2 text-xs text-status-failed">
+          <AlertCircle size={12} /> {err}
+        </div>
+      )}
+      {canEdit && (
+        <div className="mt-3 flex items-center justify-end">
+          <button
+            type="button"
+            disabled={!dirty || saving}
+            onClick={() => void save()}
+            className="inline-flex items-center gap-2 bg-gold-300 px-3 py-1.5 text-xs font-medium text-ink-950 hover:bg-gold-200 disabled:opacity-50 disabled:hover:bg-gold-300"
+          >
+            <Save size={11} /> {saving ? "Saving…" : "Save review"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
