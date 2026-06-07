@@ -46,6 +46,11 @@ export function PortalSignIn() {
   const [keyStatus, setKeyStatus] = useState<"idle" | "waiting" | "verified" | "error">("idle");
   const [keyError, setKeyError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  // Label written into the user record so the admin can later distinguish
+  // multiple registered keys (e.g. "YubiKey 5C" vs "Touch ID — Macbook").
+  // Default to a generic name; the pre-flight form lets the user change it
+  // before the WebAuthn ceremony begins.
+  const [keyLabel, setKeyLabel] = useState("YubiKey");
 
   const [totp, setTotp] = useState<string[]>(["", "", "", "", "", ""]);
   const [totpError, setTotpError] = useState<string | null>(null);
@@ -102,8 +107,12 @@ export function PortalSignIn() {
     }
     setKeyError(null);
     if (!hasWebAuthnKey) {
-      // No key yet — register one now
-      await registerKey();
+      // No key yet — surface the label form first so the user can name the
+      // key (e.g. "YubiKey 5C") BEFORE the browser ceremony starts. The
+      // ceremony fires when they click "Begin enrollment".
+      setRegistering(true);
+      setKeyStatus("idle");
+      setStep("key");
     } else {
       await authenticateKey();
     }
@@ -115,6 +124,7 @@ export function PortalSignIn() {
     setKeyStatus("waiting");
     setKeyError(null);
     setRegistering(true);
+    const labelToSave = keyLabel.trim() || "Primary security key";
     try {
       const optsRes = await fetch("/api/auth/webauthn/register-begin", {
         method: "POST",
@@ -129,7 +139,7 @@ export function PortalSignIn() {
       const finishRes = await fetch("/api/auth/webauthn/register-finish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, response: attResp, label: "Primary security key" })
+        body: JSON.stringify({ email, response: attResp, label: labelToSave })
       });
       const finishData = await finishRes.json();
       if (!finishRes.ok) throw new Error(finishData.error || "Registration failed");
@@ -443,7 +453,56 @@ export function PortalSignIn() {
                   </motion.div>
                 )}
 
-                {step === "key" && (
+                {step === "key" && registering && keyStatus === "idle" && (
+                  <motion.div
+                    key="key-label"
+                    initial={{ opacity: 0, x: 12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                  >
+                    <h2 className="font-serif text-2xl text-bone-50">Name this security key</h2>
+                    <p className="mt-1 text-xs text-bone-400">
+                      One enrollment per key. The label is recorded with the credential so you can
+                      identify it later if you register more than one.
+                    </p>
+
+                    <label className="mt-6 block">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
+                        Key name
+                      </span>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={keyLabel}
+                        onChange={(e) => setKeyLabel(e.target.value)}
+                        maxLength={64}
+                        placeholder="YubiKey 5C — admin"
+                        className="mt-2 w-full border border-ink-700 bg-ink-950 px-3 py-2.5 text-sm text-bone-100 placeholder:text-bone-500 focus:border-gold-300 focus:outline-none"
+                      />
+                    </label>
+
+                    <div className="mt-3 flex items-center gap-2 border border-ink-700 bg-ink-950 px-3 py-2 text-[11px] text-bone-300">
+                      <Info size={12} className="text-gold-300 shrink-0" />
+                      <span>
+                        Plug the YubiKey in <strong className="text-bone-100">before</strong> you click
+                        Begin. The browser will prompt; tap the gold disc when it blinks.
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => registerKey()}
+                      className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-gold-300 px-5 py-3 text-sm font-medium text-ink-950 hover:bg-gold-200"
+                    >
+                      Begin enrollment <ArrowRight size={14} />
+                    </button>
+
+                    <BackLink onClick={() => { setRegistering(false); setStep("method"); }} label="Back" />
+                  </motion.div>
+                )}
+
+                {step === "key" && !(registering && keyStatus === "idle") && (
                   <motion.div
                     key="key"
                     initial={{ opacity: 0, x: 12 }}
@@ -461,7 +520,7 @@ export function PortalSignIn() {
                     </h2>
                     <p className="mt-2 text-xs text-bone-400">
                       {registering
-                        ? "Follow the browser prompt — TouchID, Windows Hello, or a hardware key."
+                        ? `Follow the browser prompt to enroll "${keyLabel.trim() || "Primary security key"}". Tap the key when it blinks.`
                         : "Insert the key and tap, or use your platform authenticator."}
                     </p>
 
@@ -522,6 +581,7 @@ export function PortalSignIn() {
                         onClick={() => {
                           setKeyStatus("idle");
                           setKeyError(null);
+                          setRegistering(false);
                           setStep("method");
                         }}
                         disabled={keyStatus === "verified"}
