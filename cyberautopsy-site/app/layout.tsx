@@ -32,39 +32,44 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.domain),
   title: {
-    default: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
+    default: "CyberAutopsy — Cybersecurity, Risk, and Technology Services",
     template: "%s — CyberAutopsy"
   },
   description:
-    "An RPO partnered with C3PAOs. We take DoD primes and subcontractors from gap to SPRS-submitted in 90 days and certified within the audit window — or we don't stop.",
+    "Risk-based cybersecurity, GRC, cloud, AI, and workforce services for federal agencies, defense contractors, regulated organizations, and commercial businesses. CMMC support is one part of a broader portfolio.",
   keywords: [
-    "CMMC Level 2",
-    "CMMC certification",
+    "Cybersecurity consulting",
+    "GRC",
+    "Governance Risk and Compliance",
+    "NIST 800-53",
     "NIST 800-171",
-    "DFARS 7012",
-    "DFARS 7019",
-    "DFARS 7020",
-    "DFARS 7021",
-    "SPRS score",
-    "C3PAO",
-    "RPO",
-    "DoD contractor compliance"
+    "CMMC",
+    "FedRAMP",
+    "FISMA",
+    "Zero Trust",
+    "ISO 27001",
+    "SOC 2",
+    "HIPAA",
+    "Cloud security",
+    "Third-party risk",
+    "AI governance",
+    "Cybersecurity workforce development"
   ],
   authors: [{ name: "CyberAutopsy" }],
   openGraph: {
     type: "website",
-    title: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
+    title: "CyberAutopsy — Cybersecurity, Risk, and Technology Services",
     description:
-      "For contractors who can't afford to lose DoD work. Gap to SPRS submission in 90 days. Certified or we don't stop.",
+      "Cybersecurity, GRC, cloud, AI, and workforce services for federal, defense, regulated, and commercial organizations. Risk-based, not checklist-driven.",
     url: SITE.domain,
     siteName: SITE.name,
     images: [{ url: "/og.jpg", width: 1200, height: 630 }]
   },
   twitter: {
     card: "summary_large_image",
-    title: "CyberAutopsy — CMMC Accreditation. Guaranteed.",
+    title: "CyberAutopsy — Cybersecurity, Risk, and Technology Services",
     description:
-      "Former DoD assessors. White-glove compliance for primes and subcontractors with CUI."
+      "Practical, risk-based cybersecurity and GRC services. NIST, CMMC, FedRAMP, Zero Trust, cloud security, AI governance, workforce development."
   },
   robots: { index: true, follow: true }
 };

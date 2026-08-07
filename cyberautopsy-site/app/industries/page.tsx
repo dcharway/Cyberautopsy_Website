@@ -1,65 +1,70 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Industries — Primes, Subcontractors, Manufacturers, SaaS, Universities",
+  title: "Industries — Federal, Defense, Regulated, Commercial, and Technology",
   description:
-    "Engagements tailored to where CUI lives. Prime contractors, subcontractors, defense manufacturers, SaaS providers in the DoD supply chain, and research universities."
+    "Cybersecurity, GRC, cloud, and workforce services for federal agencies, defense contractors, healthcare and financial organizations, commercial businesses, and technology companies."
 };
 
 const sectors = [
   {
-    code: "PRI",
-    name: "Prime Contractors",
-    headline: "You set the flow-down standard. Mistakes are visible.",
-    body: "Primes are now answerable to contracting officers for the CMMC posture of their subcontractor base. The CUI boundary you defend is no longer just your own. We help primes build supplier intake programs that surface SPRS scores, draft compliant teaming agreement language, and rehearse the C3PAO posture across the supply chain.",
+    code: "FED",
+    name: "Federal Agencies",
+    headline: "Mission support with cybersecurity engineered in.",
+    body: "We support federal civilian and defense agencies with authorization work under FISMA and NIST 800-53, FedRAMP sponsorship and A&A support for cloud services, continuous monitoring programs, and mission-focused technology modernization.",
     typical: [
-      "$500M to $5B+ annual DoD revenue",
-      "10 to 200 subcontractors with CUI flow-down",
-      "CISO + Contracts + Supply Chain stakeholder triangle"
+      "FISMA / NIST 800-53 authorization support",
+      "FedRAMP program office and 3PAO coordination",
+      "Continuous monitoring and control assessments",
+      "Mission-focused data, cloud, and AI modernization"
     ]
   },
   {
-    code: "SUB",
-    name: "Subcontractors",
-    headline: "The 7021 clause just landed in your inbox.",
-    body: "Most subcontractors discover CMMC the day a prime sends them a flow-down notice. The 14 families do not get easier because you are smaller; in practice, they get harder because the assumed infrastructure is not present. We collapse the program down to the minimum viable enclave for sub-scale teams, often using a dedicated GCC-High tenant or a hardened workstation pattern.",
+    code: "DoD",
+    name: "Defense Contractors",
+    headline: "Primes, subs, and manufacturers handling FCI or CUI.",
+    body: "From prime contractors coordinating supply-chain flow-down to sub-scale contractors receiving their first DFARS 7021 notice, we tailor CMMC readiness, documentation, and assessment support to the operating reality — including the manufacturing shop floor, ITAR-controlled drawings, and OT/IT convergence.",
     typical: [
-      "$1M to $50M annual revenue",
-      "Single contracting officer, often single prime",
-      "IT often outsourced; CISO function distributed"
+      "CMMC readiness at Level 1, Level 2, or Level 3",
+      "DFARS 7012 / 7019 / 7020 / 7021 compliance",
+      "CUI enclave design (on-prem or GCC-High)",
+      "Supplier flow-down programs for primes"
     ]
   },
   {
-    code: "MFG",
-    name: "Defense Manufacturers",
-    headline: "Your shop floor is in scope. Most are.",
-    body: "Manufacturers are the highest-risk industry profile under CMMC because operational technology, contract drawings, and CAD files routinely qualify as CUI. We design enclaves that protect engineering data without halting production. CNC programming, ERP integration, and vendor portals all get scoped carefully.",
+    code: "REG",
+    name: "Regulated Organizations",
+    headline: "Healthcare, financial services, energy, and critical infrastructure.",
+    body: "Regulated industries carry overlapping obligations — HIPAA and HITRUST in healthcare; PCI DSS, SOX, and GLBA in finance; NERC CIP and TSA directives in energy; sector-specific rules elsewhere. We build integrated compliance programs that satisfy each obligation without duplicating the work.",
     typical: [
-      "ITAR-controlled drawings and technical data",
-      "OT/IT convergence challenges",
-      "Multi-site operations with varied IT maturity"
+      "HIPAA / HITRUST security and privacy programs",
+      "PCI DSS assessment support and remediation",
+      "SOC 2 program stand-up and readiness",
+      "Sector-specific critical infrastructure obligations"
     ]
   },
   {
-    code: "SAAS",
-    name: "SaaS Providers in the DoD Supply Chain",
-    headline: "You are an External Service Provider. The rules are different.",
-    body: "SaaS firms whose products store, process, or transmit CUI for DoD customers are External Service Providers under the rules. Your customers will require evidence of your security posture, often demanding FedRAMP Moderate equivalency or higher. We position SaaS providers for both the CMMC ESP role and the underlying FedRAMP path where required.",
+    code: "COM",
+    name: "Commercial Businesses",
+    headline: "Growth-stage security programs that hold up under diligence.",
+    body: "Commercial firms often confront cybersecurity when a customer requires it — a SOC 2 report, an ISO 27001 certificate, an enterprise-security questionnaire. We stand up right-sized programs that answer the question in front of you now and scale into the certifications that come next.",
     typical: [
-      "FedRAMP Moderate or High equivalency required",
-      "Multi-tenant boundary justification needed",
-      "Continuous monitoring and POA&M discipline expected"
+      "SOC 2 Type I and Type II readiness + audit support",
+      "ISO 27001 program design + certification support",
+      "Vendor security questionnaire response programs",
+      "Board-facing risk reporting and executive briefings"
     ]
   },
   {
-    code: "EDU",
-    name: "Universities with CUI",
-    headline: "Federally funded research is on the line.",
-    body: "Universities are an under-served corner of the CMMC ecosystem and the most painful, because the campus network model fights cleanly with the CUI enclave model. We work with research VPs and CIOs to design segregated research enclaves that protect federally funded research without rewriting institutional networks.",
+    code: "TECH",
+    name: "Technology Companies",
+    headline: "Product security, cloud-native controls, and AI governance.",
+    body: "SaaS and platform companies operate under a different threat surface — customer data, multi-tenant boundaries, third-party integrations, AI features under regulatory scrutiny. We help engineering-led firms bake security into the product lifecycle and prepare for the security-review process every enterprise customer runs.",
     typical: [
-      "DARPA, ONR, or AFRL research awards",
-      "Federated identity and BYOD complications",
-      "Decentralized governance across colleges and labs"
+      "Product security engineering and secure SDLC",
+      "Cloud-native security architecture (AWS / Azure / GCP)",
+      "FedRAMP path for SaaS selling into government",
+      "AI governance, model risk management, and privacy review"
     ]
   }
 ];
@@ -72,12 +77,13 @@ export default function Industries() {
         <div className="mx-auto max-w-7xl px-6 pt-24 pb-20 lg:px-10 lg:pt-32 lg:pb-28">
           <span className="classified-stamp">INDUSTRIES</span>
           <h1 className="mt-8 font-serif text-5xl leading-[1.04] tracking-tightest sm:text-6xl lg:text-7xl max-w-5xl">
-            Where CUI lives, <span className="gold-text">we sit.</span>
+            One firm.{" "}
+            <span className="gold-text">Five operating realities.</span>
           </h1>
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-bone-200">
-            CMMC is one standard; the playbook to reach it is not. The path for a $20M
-            subcontractor with one prime is not the path for a $3B systems integrator. We pattern
-            our engagements to the operating reality.
+            The same 110-control catalog reads very differently at a $20M subcontractor and a
+            civilian federal agency. We tailor the delivery pattern to your sector, your regulatory
+            surface, and the maturity of the program you already have.
           </p>
         </div>
       </section>
@@ -87,7 +93,7 @@ export default function Industries() {
           {sectors.map((s) => (
             <article
               key={s.code}
-              className="grid gap-10 border border-ink-700 bg-ink-900 p-8 lg:grid-cols-[180px_1fr_280px] lg:p-12"
+              className="grid gap-10 border border-ink-700 bg-ink-900 p-8 lg:grid-cols-[180px_1fr_320px] lg:p-12"
             >
               <div>
                 <div className="font-mono text-[11px] tracking-widest2 text-gold-300">
@@ -103,7 +109,7 @@ export default function Industries() {
               </div>
               <div className="border-t border-ink-700 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
                 <div className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
-                  Typical engagement profile
+                  Typical engagements
                 </div>
                 <ul className="mt-3 space-y-2 text-sm text-bone-200">
                   {s.typical.map((t) => (
@@ -126,11 +132,12 @@ export default function Industries() {
             Not sure which profile fits you?
           </h2>
           <p className="mt-5 text-bone-200">
-            A 15-minute triage call answers it. Bring your CAGE code and the most painful
-            solicitation on your desk.
+            A 20-minute call with a partner scopes it in the room. Bring the compliance obligation
+            you&rsquo;re working against, the environment you&rsquo;re protecting, and the outcome
+            you need.
           </p>
           <Link href="/contact" className="mt-10 inline-block bg-gold-300 px-6 py-4 text-sm font-medium text-ink-950 hover:bg-gold-200">
-            Book a Contract Risk Audit &rarr;
+            Request Consultation &rarr;
           </Link>
         </div>
       </section>

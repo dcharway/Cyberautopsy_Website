@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ProcessTimeline } from "@/components/ProcessTimeline";
 
 export const metadata = {
-  title: "The CyberAutopsy Method — Diagnose, Expose, Operate, Certify, Monitor",
+  title: "Our Approach — Risk-Based Cybersecurity, GRC, and Technology Consulting",
   description:
-    "Five phases. Built from inside dozens of C3PAO assessments. Each phase produces an artifact that survives audit, not a slide that survives a meeting."
+    "A five-phase engagement model: understand risk, design the program, implement controls, prove posture under audit, and sustain the outcome. Framework-agnostic, senior-led, artifact-first."
 };
 
 export default function Process() {
@@ -13,16 +13,17 @@ export default function Process() {
       <section className="relative border-b border-ink-700/60 bg-ink-950">
         <div className="absolute inset-0 -z-10 bg-blueprint bg-blueprint-grid opacity-20" />
         <div className="mx-auto max-w-7xl px-6 pt-24 pb-20 lg:px-10 lg:pt-32 lg:pb-28">
-          <span className="classified-stamp">METHOD</span>
+          <span className="classified-stamp">APPROACH</span>
           <h1 className="mt-8 font-serif text-5xl leading-[1.04] tracking-tightest sm:text-6xl lg:text-7xl max-w-5xl">
-            The CyberAutopsy Method.
-            <br />
-            <span className="gold-text">Five phases. No surprises.</span>
+            Risk first. Framework second.{" "}
+            <span className="gold-text">Evidence always.</span>
           </h1>
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-bone-200">
-            Compliance is a documentation discipline before it is a technology problem. Every phase
-            below produces a specific artifact, signed by a specific owner, defensible against a
-            specific NIST 800-171A determination statement. The certificate is the byproduct.
+            A cybersecurity program is a documentation and operations discipline before it is a
+            technology problem. Every phase below produces a specific artifact, signed by a
+            specific owner, defensible against the framework your regulators or customers require —
+            NIST, CMMC, FedRAMP, FISMA, ISO&nbsp;27001, SOC&nbsp;2, HIPAA, or a combination. The
+            certification is the byproduct.
           </p>
         </div>
       </section>
@@ -41,39 +42,39 @@ export default function Process() {
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
             <Principle
               n="01"
-              title="Boundary before tooling"
-              body="We do not buy a single license before the CUI boundary is signed. Tooling decisions made before scoping produce overspend and audit headaches."
+              title="Scope before tooling"
+              body="We do not recommend a single license or platform before the boundary, data flows, and risk model are signed. Tooling decisions made before scoping produce overspend and audit headaches."
             />
             <Principle
               n="02"
               title="Artifacts over assertions"
-              body="A control is implemented when the artifact survives a hostile read. Until then it is a draft, no matter what the policy says."
+              body="A control is implemented when the artifact survives a hostile read. Until then it is a draft, regardless of what the policy says."
             />
             <Principle
               n="03"
-              title="Weekly war rooms"
-              body="One standing, one-hour engagement per week with the executive sponsor, IT lead, and compliance surgeon. No status decks; only blockers and decisions."
+              title="Weekly working sessions"
+              body="One standing, one-hour engagement per week with the executive sponsor, IT lead, and lead practitioner. No status decks — only blockers and decisions."
             />
             <Principle
               n="04"
               title="Plain-English deliverables"
-              body="Every executive memo is one page, written in language a CFO or contracting officer can read aloud in a meeting."
+              body="Every executive memo is one page, written in language a CFO, contracting officer, or board member can read aloud without an interpreter."
             />
             <Principle
               n="05"
               title="Evidence as code"
-              body="We treat artifacts the way engineers treat code: versioned, reviewed, and signed. The Evidence Library is a repository, not a folder."
+              body="We treat compliance artifacts the way engineers treat source: versioned, reviewed, and signed. The evidence library is a repository, not a folder."
             />
             <Principle
               n="06"
               title="No subcontracting of judgment"
-              body="A partner signs every Assessment Packet that leaves the firm. No junior staff to assessor handoff. Ever."
+              body="A partner signs every deliverable that leaves the firm. No junior-staff handoff to the client or the assessor. Ever."
             />
           </div>
 
           <div className="mt-16 text-center">
             <Link href="/contact" className="bg-gold-300 px-6 py-4 text-sm font-medium text-ink-950 hover:bg-gold-200">
-              Book a Contract Risk Audit &rarr;
+              Request Consultation &rarr;
             </Link>
           </div>
         </div>

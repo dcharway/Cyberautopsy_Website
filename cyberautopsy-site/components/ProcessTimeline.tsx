@@ -5,47 +5,47 @@ import { motion } from "framer-motion";
 const phases = [
   {
     n: "01",
-    code: "DIAGNOSE",
-    title: "Map the CUI boundary",
+    code: "SCOPE",
+    title: "Map the risk and the boundary",
     body:
-      "We trace every system, person, and data flow that touches Controlled Unclassified Information. Anything in scope is documented; anything out of scope is excluded with evidence. The boundary decision sets the cost of everything that follows.",
-    deliverable: "Scoping Memo, Network Diagram, Data Flow Map",
+      "We trace every system, person, data flow, and third party that touches the information you must protect. Anything in scope is documented; anything out of scope is excluded with evidence. The scoping decision sets the cost of everything that follows.",
+    deliverable: "Scope Memo, Network Diagram, Data Flow Map",
     duration: "Week 1"
   },
   {
     n: "02",
-    code: "EXPOSE",
-    title: "Evidence gap heatmap",
+    code: "ASSESS",
+    title: "Score controls against real evidence",
     body:
-      "Every one of the 110 controls is scored against artifacts you can actually produce in an assessment. Implemented, partially implemented, or not implemented — with a per-control owner and severity weight.",
-    deliverable: "SSP v1, POA&M, SPRS Score",
+      "Every control required by the applicable framework (NIST, CMMC, ISO 27001, SOC 2, HIPAA, and so on) is scored against artifacts you can actually produce. Implemented, partially implemented, or not implemented — with a per-control owner and severity weight.",
+    deliverable: "SSP / Program Doc, POA&M / Findings Register, Baseline Score",
     duration: "Week 2"
   },
   {
     n: "03",
-    code: "OPERATE",
-    title: "Remediate, with your IT",
+    code: "IMPLEMENT",
+    title: "Remediate alongside your team",
     body:
-      "A surge team works beside your engineers. Configurations applied, policies authored, training delivered, evidence captured. We do not hand you a backlog — we close it with you.",
-    deliverable: "Implemented Controls, Artifact Library",
+      "A senior team works beside your engineers, compliance owners, and executives. Configurations applied, policies authored, training delivered, evidence captured. We do not hand you a backlog — we close it with you.",
+    deliverable: "Implemented Controls, Evidence Library",
     duration: "Weeks 3–12"
   },
   {
     n: "04",
-    code: "CERTIFY",
-    title: "C3PAO handoff and pass",
+    code: "PROVE",
+    title: "Audit / assessment support",
     body:
-      "Your Assessment Packet is built like we are the assessor. We escort the engagement — reading rooms, evidence defense, real-time clarification. Findings get answered before they become findings.",
-    deliverable: "Assessment Packet, Pass Letter",
+      "Your assessment packet is built the way the assessor reads it. We escort the engagement — reading rooms, evidence defense, real-time clarification. Findings get answered before they become findings.",
+    deliverable: "Assessment Packet, Certification / Authorization Letter",
     duration: "Audit window"
   },
   {
     n: "05",
-    code: "MONITOR",
-    title: "SPRS and affirmation, forever",
+    code: "SUSTAIN",
+    title: "Continuous monitoring + annual affirmation",
     body:
-      "Annual affirmation, configuration drift detection, control re-test. Your score stays at 110 because someone is watching it weekly, not annually.",
-    deliverable: "Quarterly Reviews, Annual Affirmation",
+      "Configuration drift detection, control re-test, annual attestations and affirmations. Your posture stays current because someone is watching it weekly, not annually.",
+    deliverable: "Quarterly Reviews, Annual Attestation",
     duration: "Ongoing"
   }
 ];
@@ -55,13 +55,14 @@ export function ProcessTimeline() {
     <section className="relative bg-ink-950 py-24 lg:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <div className="max-w-2xl">
-          <span className="classified-stamp">THE CYBERAUTOPSY METHOD</span>
+          <span className="classified-stamp">FIVE-PHASE ENGAGEMENT MODEL</span>
           <h2 className="mt-6 font-serif text-4xl tracking-tightest sm:text-5xl">
             Five phases. <span className="gold-text">No surprises.</span>
           </h2>
           <p className="mt-5 text-bone-300">
-            Built from the inside of dozens of C3PAO assessments. Each phase produces an artifact that
-            survives audit, not a slide that survives a meeting.
+            Framework-agnostic. Whether the target is CMMC, FedRAMP, ISO&nbsp;27001, SOC&nbsp;2,
+            HIPAA, or a custom program, each phase produces an artifact that survives audit — not a
+            slide that survives a meeting.
           </p>
         </div>
 

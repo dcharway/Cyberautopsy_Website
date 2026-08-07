@@ -3,27 +3,32 @@ import { SITE } from "@/lib/utils";
 
 const cols = [
   {
-    title: "Practice",
+    title: "Services",
     links: [
-      { href: "/cmmc-level-2", label: "CMMC Level 2" },
-      { href: "/services", label: "Services" },
-      { href: "/process", label: "The CyberAutopsy Method" },
-      { href: "/industries", label: "Industries" }
+      { href: "/services#cyber-grc", label: "Cybersecurity & GRC" },
+      { href: "/services#it-cloud", label: "IT & Cloud Services" },
+      { href: "/services#grc-engineering", label: "Custom GRC & Risk Engineering" },
+      { href: "/services#ai-emerging", label: "Cloud, AI & Emerging Tech" },
+      { href: "/services#mission-support", label: "Mission & Organizational Support" },
+      { href: "/services#workforce", label: "Workforce Development & Training" }
     ]
   },
   {
-    title: "Knowledge",
+    title: "Frameworks",
     links: [
-      { href: "/resources", label: "Resources" },
-      { href: "/resources#sprs-calculator", label: "SPRS Score Estimator" },
-      { href: "/resources#dfars-checklist", label: "DFARS 7012 Checklist" },
-      { href: "/resources#self-assessment", label: "Will I Fail? Self-Assessment" }
+      { href: "/cmmc-level-2", label: "CMMC Support" },
+      { href: "/resources/cmmc-2-vs-1", label: "CMMC Level 1 vs Level 2" },
+      { href: "/resources/dfars-7012-obligations", label: "DFARS 252.204-7012" },
+      { href: "/resources/sprs-estimator", label: "SPRS Score Estimator" },
+      { href: "/resources", label: "All Resources" }
     ]
   },
   {
     title: "Firm",
     links: [
       { href: "/about", label: "About" },
+      { href: "/industries", label: "Industries" },
+      { href: "/process", label: "Approach" },
       { href: "/contact", label: "Contact" },
       { href: "/portal", label: "Client Portal" },
       { href: "/about#careers", label: "Careers" }
@@ -41,11 +46,13 @@ export function Footer() {
               <span className="font-serif text-2xl tracking-tightest">CyberAutopsy</span>
             </div>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-bone-300">
-              A Registered Provider Organization (RPO) partnered with C3PAOs. We dissect, document, and
-              defend your CMMC posture so you stay eligible to compete for DoD work.
+              Risk-based cybersecurity, governance, risk, and compliance services for federal
+              agencies, defense contractors, regulated organizations, and commercial businesses.
+              CMMC support is one part of a broader portfolio that spans cloud, AI, and workforce
+              development.
             </p>
             <p className="mt-5 font-mono text-[11px] tracking-widest2 text-gold-300/80">
-              CMMC-AB REGISTERED &middot; CUI HANDLED
+              CYBERSECURITY &middot; RISK &middot; TECHNOLOGY
             </p>
           </div>
 

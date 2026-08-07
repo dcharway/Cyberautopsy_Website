@@ -32,23 +32,27 @@ export function Hero() {
           transition={{ duration: 0.7, ease: "easeOut" }}
           className="max-w-4xl"
         >
-          <div className="flex items-center gap-3">
-            <span className="classified-stamp">RPO &middot; PARTNERED WITH C3PAOs</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="classified-stamp">CYBERSECURITY · RISK · TECHNOLOGY</span>
             <span className="hidden sm:inline-block font-mono text-[10px] tracking-widest2 text-bone-400">
-              EST. WASHINGTON METRO &middot; CMMC 2.0 READY
+              FEDERAL &middot; DEFENSE &middot; REGULATED &middot; COMMERCIAL
             </span>
           </div>
 
           <h1 className="mt-10 font-serif text-5xl leading-[1.02] tracking-tightest sm:text-6xl lg:text-7xl">
-            CMMC Accreditation.
+            Cybersecurity, GRC, and technology services.
             <br />
-            <span className="gold-text">Guaranteed.</span>
+            <span className="gold-text">Risk-based, not checklist-driven.</span>
           </h1>
 
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-bone-200 sm:text-xl">
-            For DoD contractors who cannot afford to lose the next award. We diagnose your
-            environment against the 110 controls of NIST 800-171, remediate with your team, and sit
-            beside you through the C3PAO assessment. <span className="text-bone-50 font-medium">Certified, or we don&rsquo;t stop.</span>
+            We help federal agencies, defense contractors, regulated organizations, and commercial
+            businesses strengthen cybersecurity, satisfy compliance obligations, and modernize
+            technology environments.{" "}
+            <span className="text-bone-50 font-medium">
+              CMMC, NIST, FedRAMP, FISMA, Zero Trust, ISO&nbsp;27001, SOC&nbsp;2, HIPAA — supported
+              as part of a broader portfolio.
+            </span>
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -56,36 +60,45 @@ export function Hero() {
               href="/contact"
               className="inline-flex items-center justify-center gap-2 bg-gold-300 px-6 py-4 text-sm font-medium tracking-wide text-ink-950 transition hover:bg-gold-200"
             >
-              Book a Contract Risk Audit
+              Request Consultation
               <span aria-hidden>&rarr;</span>
             </Link>
             <Link
-              href="/cmmc-level-2"
+              href="/services"
               className="inline-flex items-center justify-center gap-2 border border-bone-300/30 px-6 py-4 text-sm font-medium tracking-wide text-bone-100 transition hover:border-gold-300 hover:text-gold-300"
             >
-              See the 110 Controls
+              Explore all services
             </Link>
           </div>
 
           <div className="mt-14 grid max-w-3xl grid-cols-2 gap-y-6 gap-x-10 sm:grid-cols-4">
-            <Stat k="90d" v="Gap to SPRS submission" />
-            <Stat k="120d" v="Audit-ready posture" />
-            <Stat k="110/110" v="Target SPRS score" />
-            <Stat k="37" v="DoD primes engaged" />
+            <Stat k="6" v="Service practices" />
+            <Stat k="10+" v="Frameworks supported" />
+            <Stat k="Federal" v="&amp; commercial clients" />
+            <Stat k="Risk-first" v="Engagement model" />
           </div>
         </motion.div>
       </div>
 
-      {/* Bottom hairline marquee */}
+      {/* Bottom hairline marquee — frameworks + capabilities we support */}
       <div className="relative border-t border-ink-700/70 bg-ink-900/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 overflow-x-auto px-6 py-4 lg:px-10">
-          {["DFARS 252.204-7012", "DFARS 252.204-7019", "DFARS 252.204-7020", "DFARS 252.204-7021", "NIST SP 800-171 Rev. 2", "CMMC 2.0"].map(
-            (t) => (
-              <span key={t} className="whitespace-nowrap font-mono text-[10px] tracking-widest2 text-bone-300">
-                {t}
-              </span>
-            )
-          )}
+          {[
+            "NIST SP 800-53",
+            "NIST SP 800-171",
+            "CMMC",
+            "FedRAMP",
+            "FISMA",
+            "Zero Trust",
+            "ISO 27001",
+            "SOC 2",
+            "HIPAA",
+            "DFARS 7012"
+          ].map((t) => (
+            <span key={t} className="whitespace-nowrap font-mono text-[10px] tracking-widest2 text-bone-300">
+              {t}
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -96,7 +109,10 @@ function Stat({ k, v }: { k: string; v: string }) {
   return (
     <div>
       <div className="font-serif text-3xl text-bone-50">{k}</div>
-      <div className="mt-1 text-xs uppercase tracking-widest text-bone-400">{v}</div>
+      <div
+        className="mt-1 text-xs uppercase tracking-widest text-bone-400"
+        dangerouslySetInnerHTML={{ __html: v }}
+      />
     </div>
   );
 }

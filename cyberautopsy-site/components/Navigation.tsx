@@ -6,10 +6,10 @@ import { Menu, X, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/cmmc-level-2", label: "CMMC Level 2" },
   { href: "/services", label: "Services" },
-  { href: "/process", label: "The Method" },
+  { href: "/cmmc-level-2", label: "CMMC Support" },
   { href: "/industries", label: "Industries" },
+  { href: "/process", label: "Approach" },
   { href: "/resources", label: "Resources" },
   { href: "/about", label: "About" }
 ];
@@ -24,7 +24,7 @@ export function Navigation() {
           <div className="leading-none">
             <span className="block font-serif text-[19px] tracking-tightest">CyberAutopsy</span>
             <span className="block font-mono text-[9px] tracking-widest2 text-gold-300/80">
-              SHIELD &middot; COMPLIANCE
+              CYBERSECURITY &middot; RISK &middot; TECHNOLOGY
             </span>
           </div>
         </Link>
@@ -54,7 +54,7 @@ export function Navigation() {
             href="/contact"
             className="inline-flex items-center gap-2 border border-gold-300/40 bg-gold-300/5 px-5 py-2.5 text-sm font-medium text-gold-100 transition hover:bg-gold-300 hover:text-ink-950"
           >
-            Book Contract Risk Audit
+            Request Consultation
             <span aria-hidden>&rarr;</span>
           </Link>
         </div>
@@ -98,7 +98,7 @@ export function Navigation() {
             onClick={() => setOpen(false)}
             className="inline-flex items-center justify-center border border-gold-300/40 bg-gold-300/10 px-4 py-3 text-sm font-medium text-gold-100"
           >
-            Book Contract Risk Audit &rarr;
+            Request Consultation &rarr;
           </Link>
         </div>
       </div>

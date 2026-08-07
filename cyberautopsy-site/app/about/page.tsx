@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About — Former C3PAOs Who Sit on Your Side of the Table",
+  title: "About — Cybersecurity, Risk, and Technology Consulting Firm",
   description:
-    "We were C3PAOs. We saw good companies fail for dumb reasons. CyberAutopsy is the firm we wished existed when we sat on the other side of the assessment."
+    "CyberAutopsy is a cybersecurity, GRC, cloud, and workforce services firm serving federal agencies, defense contractors, regulated organizations, and commercial businesses. Founded by former DoD assessors, CISOs, and engineering leaders."
 };
 
 export default function About() {
@@ -14,54 +14,53 @@ export default function About() {
         <div className="mx-auto max-w-7xl px-6 pt-24 pb-20 lg:px-10 lg:pt-32 lg:pb-28">
           <span className="classified-stamp">FIRM &middot; ABOUT</span>
           <h1 className="mt-8 font-serif text-5xl leading-[1.04] tracking-tightest sm:text-6xl lg:text-7xl max-w-5xl">
-            We were the assessor.
-            <br />
-            <span className="gold-text">Now we sit on your side of the table.</span>
+            Cybersecurity, risk, and technology consulting —{" "}
+            <span className="gold-text">delivered by senior operators.</span>
           </h1>
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-bone-200">
-            CyberAutopsy was founded by lead assessors and former CISOs from inside the Defense
-            Industrial Base. We have read packets that should have passed and watched them fail
-            because the contractor never met an assessor before audit day. That is the problem we
-            built the firm to solve.
+            CyberAutopsy is a cybersecurity, governance, and technology services firm. We help
+            federal agencies, defense contractors, regulated organizations, and commercial
+            businesses build security programs that are risk-based, framework-aligned, and
+            defensible under audit. Our practices span cybersecurity and GRC, cloud and technology
+            modernization, custom GRC engineering, cloud and AI adoption, mission support, and
+            workforce development.
           </p>
         </div>
       </section>
 
       <section className="bg-ink-900 py-24 lg:py-32 border-b border-ink-700/60">
         <div className="mx-auto max-w-4xl px-6 lg:px-10">
-          <span className="classified-stamp">FOUNDER STORY</span>
+          <span className="classified-stamp">FIRM STORY</span>
           <h2 className="mt-6 font-serif text-4xl tracking-tightest sm:text-5xl">
-            A $30M company. <span className="gold-text">A two-week findings report.</span>
+            Founded by people who lived on{" "}
+            <span className="gold-text">both sides of the audit.</span>
           </h2>
 
           <div className="mt-8 space-y-6 text-bone-200">
             <p>
-              In the spring of 2023, I (M. Okafor) was the lead assessor on a C3PAO engagement for a
-              $30M defense manufacturer in the Mid-Atlantic. The CEO had built the company over two
-              decades. The CIO had a degree in mechanical engineering and a side-of-desk security
-              function. They had bought a CMMC &ldquo;readiness platform&rdquo; for $80,000 the year before.
+              The firm was founded by former DoD assessors, CISOs from the Defense Industrial Base,
+              and cloud and data engineers who had watched too many well-run companies stumble at
+              the moment their program had to prove itself. The pattern was consistent — the
+              security work was often adequate, but the program had been built to a checklist
+              instead of to the underlying risk.
             </p>
             <p>
-              They failed in week two of the assessment. Not because their security was bad — it was
-              fine — but because their evidence was unreadable. The SSP was generated from a tool.
-              The artifacts were tagged by IT system, not by control. The CIO had to translate every
-              question into a screenshot search. The audit window expired before we got through the
-              Access Control family.
+              We built CyberAutopsy on a different premise. Start with the risk that actually
+              matters to the mission or the business. Instrument the program so posture is
+              observable between audits, not just during them. Build the evidence the way an
+              assessor reads it. Sit next to the client when it counts. Frameworks — NIST, CMMC,
+              FedRAMP, ISO 27001, SOC 2, HIPAA — follow from that discipline, not the other way
+              around.
             </p>
             <p>
-              The contracting officer pulled the award two months later. The CEO laid off 40
-              people. The IT director quit. The company is still trading, but as a sub on smaller
-              awards. It did not need to happen.
-            </p>
-            <p>
-              I left assessment six weeks after that engagement. CyberAutopsy is the firm I wished
-              had been sitting next to that CEO. We build the packet the way the assessor reads it,
-              we run the engagement the way the assessor runs the engagement, and we tell the truth
-              about what is missing the day we walk in.
+              Today our practice serves federal missions and commercial enterprises alike. We staff
+              engagements with senior practitioners across cybersecurity, GRC, cloud, data, AI, and
+              workforce development. The delivery model stays the same: fixed scope, measurable
+              outcome, no juniors on the account.
             </p>
             <p className="border-l-2 border-gold-300 pl-5 italic text-bone-50">
-              &ldquo;Good companies do not fail CMMC because they have bad security. They fail because
-              they have unreadable evidence. We fix the evidence.&rdquo;
+              &ldquo;Checklist compliance is fragile. Risk-based programs hold up. We build the
+              second kind.&rdquo;
             </p>
             <p className="text-sm text-bone-400">— M. Okafor, Founder &amp; Managing Partner</p>
           </div>
@@ -96,15 +95,15 @@ export default function About() {
             />
             <Bio
               name="R. Vasquez"
-              role="Lead Compliance Surgeon"
-              prior="DCMA Industrial Security"
-              body="Ten years as a DCMA Industrial Security Specialist. Trained on NIST 800-171 from inside the government inspection regime."
+              role="Lead Cloud & Data Engineering"
+              prior="Enterprise Cloud Architect"
+              body="Cloud-native architectures, Zero Trust identity, and data platform engineering across AWS, Azure, and GCP for federal and commercial clients."
             />
             <Bio
               name="K. Iwu"
-              role="Partner, Audit Escort Practice"
+              role="Partner, GRC Engineering &amp; Workforce"
               prior="Former Lead Assessor"
-              body="40+ C3PAO engagements sat from the assessor side. Now runs our Audit Escort engagements where firms need someone in the room."
+              body="40+ assessment engagements. Now leads custom GRC platform build-outs and the firm&rsquo;s workforce development curriculum."
             />
           </div>
         </div>
@@ -114,10 +113,10 @@ export default function About() {
       <section className="bg-ink-900 py-20 lg:py-24 border-b border-ink-700/60">
         <div className="mx-auto max-w-7xl px-6 lg:px-10">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <Trust k="RPO" v="CMMC-AB Registered Provider Organization" />
-            <Trust k="C3PAO partnerships" v="Three accredited C3PAOs on retainer" />
-            <Trust k="Compliance trained" v="CCP, CCA, CISSP, CISM held by partners" />
-            <Trust k="Service area" v="United States, all DoD industrial base" />
+            <Trust k="Frameworks" v="NIST, CMMC, FedRAMP, ISO 27001, SOC 2, HIPAA" />
+            <Trust k="Practices" v="Cyber · GRC · Cloud · AI · Mission · Workforce" />
+            <Trust k="Credentials" v="CISSP, CISM, CCP, CCA, cloud certifications" />
+            <Trust k="Service area" v="United States — federal, defense, regulated, commercial" />
           </div>
         </div>
       </section>
@@ -130,9 +129,9 @@ export default function About() {
           </h2>
           <ul className="mt-10 divide-y divide-ink-700">
             <PressItem date="Mar 2026" outlet="Federal News Network" title="Why most CMMC POA&Ms are written wrong" />
-            <PressItem date="Jan 2026" outlet="NDIA Cyber Symposium" title="Panelist: Subcontractor flow-down in the new DFARS clauses" />
-            <PressItem date="Oct 2025" outlet="Defense One" title="Op-ed: The contractor pipeline cannot survive a soft enforcement year" />
-            <PressItem date="Aug 2025" outlet="AFCEA TechNet Cyber" title="Tabletop: An Audit Escort engagement, narrated" />
+            <PressItem date="Jan 2026" outlet="NDIA Cyber Symposium" title="Panelist: Third-party and supply-chain risk under Zero Trust" />
+            <PressItem date="Oct 2025" outlet="Defense One" title="Op-ed: Risk-based security beats checklist compliance every time" />
+            <PressItem date="Aug 2025" outlet="AFCEA TechNet Cyber" title="Session: Custom GRC engineering for federal missions" />
           </ul>
         </div>
       </section>
@@ -141,12 +140,13 @@ export default function About() {
         <div className="mx-auto max-w-4xl px-6 text-center lg:px-10">
           <span className="classified-stamp">CAREERS</span>
           <h2 className="mt-6 font-serif text-4xl tracking-tightest">
-            We are hiring <span className="gold-text">surgeons.</span>
+            We are hiring <span className="gold-text">senior practitioners.</span>
           </h2>
           <p className="mt-5 text-bone-300 max-w-prose2 mx-auto">
-            If you have led a C3PAO assessment, sat on the DoD assessment side, or held a CISO seat
-            at a contractor under DFARS clauses, we want to talk. Compensation is partner-grade,
-            travel is real, and engagements are signed by you.
+            Across cybersecurity, GRC, cloud, data, AI, and workforce development. If you have held
+            a CISO seat, led federal authorization work, engineered cloud-native systems, built
+            GRC platforms, or run enterprise-grade training programs, we want to talk. No juniors
+            on the account — engagements are signed by you.
           </p>
           <Link href="mailto:careers@cyberautopsy.com" className="mt-10 inline-block bg-gold-300 px-6 py-4 text-sm font-medium text-ink-950 hover:bg-gold-200">
             careers@cyberautopsy.com &rarr;
