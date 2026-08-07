@@ -11,7 +11,7 @@ export type Role = "admin" | "demo" | "viewer";
 
 export type SessionPayload = {
   sub: string;
-  mfa: "totp" | "webauthn";
+  mfa: "totp";        // WebAuthn was removed; TOTP is the only accepted MFA
   role: Role;
   iat: number;
   exp: number;
@@ -48,7 +48,11 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
     return null;
   }
   if (typeof parsed.exp !== "number" || parsed.exp < Math.floor(Date.now() / 1000)) return null;
-  if (parsed.mfa !== "totp" && parsed.mfa !== "webauthn") return null;
+  // Legacy tokens minted with mfa="webauthn" are still accepted for the
+  // remaining TTL and coerced to "totp"; forcing an immediate re-sign-in on
+  // every open session is worse than the coercion.
+  if (parsed.mfa !== "totp" && (parsed.mfa as string) !== "webauthn") return null;
+  parsed.mfa = "totp";
   if (typeof parsed.sub !== "string" || !parsed.sub) return null;
   // Tokens issued before the role field existed default to "viewer" — the
   // safest lowest-privilege bucket. Unknown values also fall back.

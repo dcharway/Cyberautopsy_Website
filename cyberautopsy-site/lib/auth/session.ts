@@ -15,7 +15,7 @@ export type Role = "admin" | "demo" | "viewer";
 
 export type SessionPayload = {
   sub: string;        // user email
-  mfa: "totp" | "webauthn";
+  mfa: "totp";        // WebAuthn was removed; TOTP is the only accepted MFA
   role: Role;         // RBAC — portal pages + API endpoints gate on this
   iat: number;        // issued at, unix seconds
   exp: number;        // expires at, unix seconds
@@ -52,7 +52,11 @@ export function verifySession(token: string): SessionPayload | null {
   }
 
   if (typeof parsed.exp !== "number" || parsed.exp < Math.floor(Date.now() / 1000)) return null;
-  if (parsed.mfa !== "totp" && parsed.mfa !== "webauthn") return null;
+  // Accept legacy tokens that were minted with `mfa: "webauthn"` — the
+  // feature is gone, but forcing an immediate re-sign-in on every existing
+  // session is worse than coercing to totp for the remaining TTL.
+  if (parsed.mfa !== "totp" && (parsed.mfa as string) !== "webauthn") return null;
+  parsed.mfa = "totp";
   if (typeof parsed.sub !== "string" || !parsed.sub) return null;
   // Tokens issued before the role field existed get defaulted to "viewer" —
   // the safest lowest-privilege bucket.

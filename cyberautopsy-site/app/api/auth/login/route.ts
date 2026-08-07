@@ -32,9 +32,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     methods: {
-      totp: user.totpEnrolled,
-      webauthn: user.webauthn.length > 0
-    },
-    webauthnCount: user.webauthn.length
+      totp: user.totpEnrolled
+    }
   });
 }

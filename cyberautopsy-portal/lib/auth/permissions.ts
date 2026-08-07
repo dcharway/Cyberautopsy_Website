@@ -12,7 +12,7 @@ import type { Role } from "./session";
 
 export type CurrentUser = {
   email: string;
-  mfa: "totp" | "webauthn";
+  mfa: "totp";
   role: Role;
 };
 
@@ -20,9 +20,10 @@ export type CurrentUser = {
 export function getCurrentUser(): CurrentUser {
   const h = headers();
   const email = h.get("x-cyber-user") ?? "unknown";
-  const mfa = (h.get("x-cyber-mfa") as "totp" | "webauthn" | null) ?? "totp";
-  const role = roleFromString(h.get("x-cyber-role"));
-  return { email, mfa, role };
+  // Header may still be "webauthn" on legacy sessions; coerce to totp.
+  const raw = h.get("x-cyber-mfa");
+  void raw;
+  return { email, mfa: "totp", role: roleFromString(h.get("x-cyber-role")) };
 }
 
 /** Read the current user's role from a Request (in API route handlers). */

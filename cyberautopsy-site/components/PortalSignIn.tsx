@@ -3,14 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  startRegistration,
-  startAuthentication,
-  browserSupportsWebAuthn
-} from "@simplewebauthn/browser";
-import {
-  KeyRound,
   Smartphone,
-  ShieldCheck,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -20,8 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Step = "identity" | "method" | "key" | "totp" | "success";
-type Method = "key" | "totp";
+type Step = "identity" | "totp" | "success";
 
 type DemoInfo = {
   email: string;
@@ -40,17 +32,6 @@ export function PortalSignIn() {
   const [password, setPassword] = useState("");
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [hasWebAuthnKey, setHasWebAuthnKey] = useState(false);
-
-  // MFA state
-  const [keyStatus, setKeyStatus] = useState<"idle" | "waiting" | "verified" | "error">("idle");
-  const [keyError, setKeyError] = useState<string | null>(null);
-  const [registering, setRegistering] = useState(false);
-  // Label written into the user record so the admin can later distinguish
-  // multiple registered keys (e.g. "YubiKey 5C" vs "Touch ID — Macbook").
-  // Default to a generic name; the pre-flight form lets the user change it
-  // before the WebAuthn ceremony begins.
-  const [keyLabel, setKeyLabel] = useState("YubiKey");
 
   const [totp, setTotp] = useState<string[]>(["", "", "", "", "", ""]);
   const [totpError, setTotpError] = useState<string | null>(null);
@@ -70,7 +51,7 @@ export function PortalSignIn() {
       .catch(() => {});
   }, []);
 
-  /* ---------- step 1: identity ---------- */
+  /* ---------- step 1: identity → straight to TOTP (only supported MFA) ---------- */
   async function submitIdentity(e: React.FormEvent) {
     e.preventDefault();
     setIdentityError(null);
@@ -83,8 +64,8 @@ export function PortalSignIn() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      setHasWebAuthnKey(Boolean(data.methods?.webauthn));
-      setStep("method");
+      setTotpError(null);
+      setStep("totp");
     } catch (err) {
       setIdentityError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -92,102 +73,7 @@ export function PortalSignIn() {
     }
   }
 
-  /* ---------- step 2: method ---------- */
-  async function pickMethod(m: Method) {
-    if (m === "totp") {
-      setTotpError(null);
-      setStep("totp");
-      return;
-    }
-    // Security key path
-    if (!browserSupportsWebAuthn()) {
-      setKeyError("This browser does not support WebAuthn. Use TOTP instead.");
-      setStep("key");
-      return;
-    }
-    setKeyError(null);
-    if (!hasWebAuthnKey) {
-      // No key yet — surface the label form first so the user can name the
-      // key (e.g. "YubiKey 5C") BEFORE the browser ceremony starts. The
-      // ceremony fires when they click "Begin enrollment".
-      setRegistering(true);
-      setKeyStatus("idle");
-      setStep("key");
-    } else {
-      await authenticateKey();
-    }
-  }
-
-  /* ---------- step 3a: WebAuthn register + authenticate ---------- */
-  async function registerKey() {
-    setStep("key");
-    setKeyStatus("waiting");
-    setKeyError(null);
-    setRegistering(true);
-    const labelToSave = keyLabel.trim() || "Primary security key";
-    try {
-      const optsRes = await fetch("/api/auth/webauthn/register-begin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-      const opts = await optsRes.json();
-      if (!optsRes.ok) throw new Error(opts.error || "Failed to begin registration");
-
-      const attResp = await startRegistration({ optionsJSON: opts });
-
-      const finishRes = await fetch("/api/auth/webauthn/register-finish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, response: attResp, label: labelToSave })
-      });
-      const finishData = await finishRes.json();
-      if (!finishRes.ok) throw new Error(finishData.error || "Registration failed");
-
-      setHasWebAuthnKey(true);
-      // Now run the authenticate ceremony to actually sign in
-      await authenticateKey();
-    } catch (err) {
-      setKeyStatus("error");
-      setKeyError(err instanceof Error ? err.message : "Registration cancelled");
-    } finally {
-      setRegistering(false);
-    }
-  }
-
-  async function authenticateKey() {
-    setStep("key");
-    setKeyStatus("waiting");
-    setKeyError(null);
-    try {
-      const optsRes = await fetch("/api/auth/webauthn/authenticate-begin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-      const opts = await optsRes.json();
-      if (!optsRes.ok) throw new Error(opts.error || "Failed to begin authentication");
-
-      const assResp = await startAuthentication({ optionsJSON: opts });
-
-      const finishRes = await fetch("/api/auth/webauthn/authenticate-finish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, response: assResp })
-      });
-      const finishData = await finishRes.json();
-      if (!finishRes.ok) throw new Error(finishData.error || "Authentication failed");
-
-      setKeyStatus("verified");
-      setCallbackUrl(finishData.callbackUrl);
-      setTimeout(() => setStep("success"), 600);
-    } catch (err) {
-      setKeyStatus("error");
-      setKeyError(err instanceof Error ? err.message : "Authentication cancelled");
-    }
-  }
-
-  /* ---------- step 3b: TOTP ---------- */
+  /* ---------- step 2: TOTP ---------- */
   async function submitTotp(e: React.FormEvent) {
     e.preventDefault();
     setTotpError(null);
@@ -225,7 +111,8 @@ export function PortalSignIn() {
     return () => clearTimeout(t);
   }, [step, callbackUrl, countdown]);
 
-  const stepIndex: Record<Step, number> = { identity: 1, method: 2, key: 3, totp: 3, success: 4 };
+  const stepIndex: Record<Step, number> = { identity: 1, totp: 2, success: 3 };
+  const totalSteps = 3;
 
   async function copy(value: string, label: string) {
     try {
@@ -287,7 +174,7 @@ export function PortalSignIn() {
           <ul className="space-y-3 text-sm">
             {[
               { t: "FIPS-validated cryptography", d: "Scrypt password hashing · HMAC-SHA256 session tokens." },
-              { t: "Real WebAuthn / FIDO2", d: "navigator.credentials ceremony · public-key on server." },
+              { t: "RFC 6238 TOTP", d: "6-digit code · 30-second window · ±1 step skew tolerance." },
               { t: "Cross-origin handoff", d: "Marketing site issues a signed token, portal at :3100 validates it." }
             ].map((x) => (
               <li key={x.t} className="flex gap-3">
@@ -315,12 +202,12 @@ export function PortalSignIn() {
                 </div>
               </div>
               <div className="font-mono text-[10px] tracking-widest2 text-bone-400">
-                STEP {String(stepIndex[step]).padStart(2, "0")} / 04
+                STEP {String(stepIndex[step]).padStart(2, "0")} / {String(totalSteps).padStart(2, "0")}
               </div>
             </header>
 
-            <div className="mt-4 grid grid-cols-4 gap-1">
-              {[1, 2, 3, 4].map((i) => (
+            <div className="mt-4 grid grid-cols-3 gap-1">
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((i) => (
                 <div
                   key={i}
                   className={cn("h-0.5 transition", i <= stepIndex[step] ? "bg-gold-300" : "bg-ink-700")}
@@ -395,213 +282,6 @@ export function PortalSignIn() {
                   </motion.form>
                 )}
 
-                {step === "method" && (
-                  <motion.div
-                    key="method"
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                  >
-                    <h2 className="font-serif text-2xl text-bone-50">Confirm your identity</h2>
-                    <p className="mt-1 text-xs text-bone-400">
-                      Two-factor authentication is required per NIST 800-171 §3.5.3.
-                    </p>
-
-                    <div className="mt-6 grid gap-3">
-                      <button
-                        type="button"
-                        onClick={() => pickMethod("key")}
-                        className="group flex items-start gap-4 border border-gold-300/40 bg-gold-300/5 p-4 text-left transition hover:bg-gold-300/10"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center border border-gold-300/60 text-gold-300">
-                          <KeyRound size={16} />
-                        </span>
-                        <div className="flex-1">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <span className="font-serif text-lg text-bone-50">Security key</span>
-                            <span className="font-mono text-[9px] tracking-widest2 text-gold-300 border border-gold-300/50 px-1.5 py-0.5">
-                              {hasWebAuthnKey ? "REGISTERED" : "REGISTER NEW"}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-bone-300">
-                            {hasWebAuthnKey
-                              ? "Use your registered key — TouchID, Windows Hello, or a YubiKey."
-                              : "Register a new key with TouchID, Windows Hello, or a YubiKey. Real navigator.credentials ceremony."}
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => pickMethod("totp")}
-                        className="group flex items-start gap-4 border border-ink-700 p-4 text-left transition hover:border-bone-300"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center border border-ink-700 text-bone-300">
-                          <Smartphone size={16} />
-                        </span>
-                        <div className="flex-1">
-                          <span className="font-serif text-lg text-bone-50">Authenticator app</span>
-                          <p className="mt-1 text-xs text-bone-300">
-                            6-digit TOTP from Microsoft Authenticator, Authy, or 1Password.
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-
-                    <BackLink onClick={() => setStep("identity")} label="Switch user" />
-                  </motion.div>
-                )}
-
-                {step === "key" && registering && keyStatus === "idle" && (
-                  <motion.div
-                    key="key-label"
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                  >
-                    <h2 className="font-serif text-2xl text-bone-50">Name this security key</h2>
-                    <p className="mt-1 text-xs text-bone-400">
-                      One enrollment per key. The label is recorded with the credential so you can
-                      identify it later if you register more than one.
-                    </p>
-
-                    <label className="mt-6 block">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-bone-400">
-                        Key name
-                      </span>
-                      <input
-                        autoFocus
-                        type="text"
-                        value={keyLabel}
-                        onChange={(e) => setKeyLabel(e.target.value)}
-                        maxLength={64}
-                        placeholder="YubiKey 5C — admin"
-                        className="mt-2 w-full border border-ink-700 bg-ink-950 px-3 py-2.5 text-sm text-bone-100 placeholder:text-bone-500 focus:border-gold-300 focus:outline-none"
-                      />
-                    </label>
-
-                    <div className="mt-3 flex items-center gap-2 border border-ink-700 bg-ink-950 px-3 py-2 text-[11px] text-bone-300">
-                      <Info size={12} className="text-gold-300 shrink-0" />
-                      <span>
-                        Plug the YubiKey in <strong className="text-bone-100">before</strong> you click
-                        Begin. The browser will prompt; tap the gold disc when it blinks.
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => registerKey()}
-                      className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-gold-300 px-5 py-3 text-sm font-medium text-ink-950 hover:bg-gold-200"
-                    >
-                      Begin enrollment <ArrowRight size={14} />
-                    </button>
-
-                    <BackLink onClick={() => { setRegistering(false); setStep("method"); }} label="Back" />
-                  </motion.div>
-                )}
-
-                {step === "key" && !(registering && keyStatus === "idle") && (
-                  <motion.div
-                    key="key"
-                    initial={{ opacity: 0, x: 12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="text-center"
-                  >
-                    <h2 className="font-serif text-2xl text-bone-50">
-                      {keyStatus === "verified"
-                        ? "Verified"
-                        : registering
-                        ? "Register your security key"
-                        : "Touch your security key"}
-                    </h2>
-                    <p className="mt-2 text-xs text-bone-400">
-                      {registering
-                        ? `Follow the browser prompt to enroll "${keyLabel.trim() || "Primary security key"}". Tap the key when it blinks.`
-                        : "Insert the key and tap, or use your platform authenticator."}
-                    </p>
-
-                    <div className="mt-10 flex items-center justify-center">
-                      <div className="relative">
-                        <span
-                          className={cn(
-                            "absolute inset-0 -m-8 rounded-full border",
-                            keyStatus === "waiting"
-                              ? "border-gold-300/30 animate-pulse-slow"
-                              : keyStatus === "verified"
-                              ? "border-status-met/50"
-                              : "border-status-failed/50"
-                          )}
-                          aria-hidden
-                        />
-                        <span
-                          className={cn(
-                            "relative flex h-24 w-24 items-center justify-center border-2 transition",
-                            keyStatus === "verified"
-                              ? "border-status-met bg-status-metBg"
-                              : keyStatus === "error"
-                              ? "border-status-failed bg-status-failedBg"
-                              : "border-gold-300 bg-gold-300/10"
-                          )}
-                        >
-                          {keyStatus === "verified" ? (
-                            <Check size={36} className="text-status-met" />
-                          ) : (
-                            <KeyRound
-                              size={36}
-                              className={keyStatus === "error" ? "text-status-failed" : "text-gold-300"}
-                            />
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-10 font-mono text-[10px] tracking-widest2 text-bone-400">
-                      {keyStatus === "verified"
-                        ? "VERIFIED"
-                        : keyStatus === "error"
-                        ? "FAILED"
-                        : registering
-                        ? "REGISTRATION IN PROGRESS…"
-                        : "WAITING FOR TAP…"}
-                    </div>
-
-                    {keyError && (
-                      <div className="mt-4 mx-auto max-w-sm border border-status-failed/60 bg-status-failedBg p-3 text-xs text-bone-100">
-                        {keyError}
-                      </div>
-                    )}
-
-                    <div className="mt-8 flex items-center justify-center gap-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setKeyStatus("idle");
-                          setKeyError(null);
-                          setRegistering(false);
-                          setStep("method");
-                        }}
-                        disabled={keyStatus === "verified"}
-                        className="font-mono text-[10px] tracking-widest2 text-bone-400 hover:text-bone-100 disabled:opacity-50"
-                      >
-                        ← CANCEL
-                      </button>
-                      {keyStatus === "error" && (
-                        <button
-                          type="button"
-                          onClick={() => (hasWebAuthnKey ? authenticateKey() : registerKey())}
-                          className="font-mono text-[10px] tracking-widest2 text-gold-300 hover:text-gold-100"
-                        >
-                          RETRY →
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-
                 {step === "totp" && (
                   <motion.form
                     key="totp"
@@ -632,15 +312,8 @@ export function PortalSignIn() {
                       {submitting ? "Verifying…" : (<>Verify <ArrowRight size={14} /></>)}
                     </button>
 
-                    <div className="mt-4 flex items-center justify-between text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => pickMethod("key")}
-                        className="text-gold-300 hover:text-gold-100"
-                      >
-                        Use security key instead
-                      </button>
-                      <BackLink onClick={() => setStep("method")} label="Back" inline />
+                    <div className="mt-4 flex items-center justify-end text-[11px]">
+                      <BackLink onClick={() => setStep("identity")} label="Switch user" inline />
                     </div>
                   </motion.form>
                 )}

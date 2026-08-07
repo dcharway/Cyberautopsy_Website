@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, ChevronDown, LogOut, KeyRound, Smartphone, ShieldCheck, User as UserIcon, type LucideIcon } from "lucide-react";
+import { Search, Bell, ChevronDown, LogOut, Smartphone, ShieldCheck, User as UserIcon, type LucideIcon } from "lucide-react";
 import { ORG } from "@/lib/utils";
 import type { Role } from "@/lib/auth/session";
 
@@ -14,7 +14,7 @@ type EngagementSummary = {
 
 type Props = {
   userEmail?: string;
-  mfaMethod?: "totp" | "webauthn";
+  mfaMethod?: "totp";
   role?: Role;
   engagement?: EngagementSummary;
 };
@@ -36,7 +36,6 @@ function clientInitials(name: string): string {
 
 export function TopBar({
   userEmail = "demo@cyberautopsy.com",
-  mfaMethod = "totp",
   role = "viewer",
   engagement
 }: Props) {
@@ -108,11 +107,7 @@ export function TopBar({
           <div className="hidden text-left md:block">
             <div className="text-xs text-bone-100 max-w-[160px] truncate">{safeEmail}</div>
             <div className="flex items-center gap-1 font-mono text-[10px] text-bone-400">
-              {mfaMethod === "webauthn" ? (
-                <><KeyRound size={9} /> WEBAUTHN</>
-              ) : (
-                <><Smartphone size={9} /> TOTP</>
-              )}
+              <Smartphone size={9} /> TOTP
             </div>
           </div>
           <ChevronDown size={12} className="text-bone-400" />

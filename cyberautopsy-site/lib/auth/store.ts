@@ -10,15 +10,6 @@ import path from "path";
 import os from "os";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
-export type WebAuthnCredential = {
-  id: string;             // base64url credentialID
-  publicKey: string;      // base64url public key
-  counter: number;
-  transports?: string[];
-  label?: string;
-  createdAt: string;
-};
-
 export type Role = "admin" | "demo" | "viewer";
 
 export type User = {
@@ -26,8 +17,6 @@ export type User = {
   passwordHash: string;   // scrypt$N$saltB64$hashB64
   totpSecret: string | null;
   totpEnrolled: boolean;
-  webauthn: WebAuthnCredential[];
-  currentChallenge: string | null;  // transient per-flow nonce
   // Password reset: token stored as sha256 hex so the at-rest file doesn't
   // contain the verbatim secret. The plaintext only exists in the email link.
   passwordResetTokenHash: string | null;
@@ -83,8 +72,6 @@ export async function loadStore(): Promise<Store> {
       passwordHash: hashPassword(DEMO_PASSWORD),
       totpSecret: DEMO_TOTP_SECRET,
       totpEnrolled: true,
-      webauthn: [],
-      currentChallenge: null,
       passwordResetTokenHash: null,
       passwordResetExpires: null,
       role: "demo",
@@ -107,8 +94,6 @@ export async function loadStore(): Promise<Store> {
         passwordHash: hashPassword(ADMIN_PASSWORD),
         totpSecret: ADMIN_TOTP_SECRET,
         totpEnrolled: true,
-        webauthn: [],
-        currentChallenge: null,
         passwordResetTokenHash: null,
         passwordResetExpires: null,
         role: "admin",
@@ -132,6 +117,8 @@ export async function loadStore(): Promise<Store> {
   }
 
   // Backfill new fields on existing users so old stores stay compatible.
+  // Also strips vestigial `webauthn` + `currentChallenge` fields that older
+  // deployments persisted before the WebAuthn feature was removed.
   // The demo + admin emails are also force-corrected — an earlier deploy
   // could have persisted role="viewer" for them, and `=== undefined` would
   // never re-correct a wrong-but-defined value.
@@ -143,6 +130,17 @@ export async function loadStore(): Promise<Store> {
     }
     if (u.passwordResetExpires === undefined) {
       u.passwordResetExpires = null;
+      dirty = true;
+    }
+    // Vestigial WebAuthn fields — drop them so the store settles on the
+    // narrower User shape.
+    const bag = u as unknown as Record<string, unknown>;
+    if ("webauthn" in bag) {
+      delete bag.webauthn;
+      dirty = true;
+    }
+    if ("currentChallenge" in bag) {
+      delete bag.currentChallenge;
       dirty = true;
     }
     const expectedRole: Role =
@@ -201,13 +199,6 @@ export async function upsertUser(u: User): Promise<void> {
   const s = await loadStore();
   s.users[u.email.toLowerCase()] = u;
   await persist();
-}
-
-export async function setUserChallenge(email: string, challenge: string | null): Promise<void> {
-  const u = await getUser(email);
-  if (!u) throw new Error("User not found");
-  u.currentChallenge = challenge;
-  await upsertUser(u);
 }
 
 /* ---------- password hashing (scrypt) ---------- */
