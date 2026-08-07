@@ -9,7 +9,7 @@ const nav = [
   { href: "/services", label: "Services" },
   { href: "/cmmc-level-2", label: "CMMC Support" },
   { href: "/industries", label: "Industries" },
-  { href: "/process", label: "Approach" },
+  { href: "/portal/plans", label: "GRC Platform" },
   { href: "/resources", label: "Resources" },
   { href: "/about", label: "About" }
 ];

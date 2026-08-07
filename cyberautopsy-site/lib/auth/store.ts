@@ -12,18 +12,47 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 export type Role = "admin" | "demo" | "viewer";
 
+/**
+ * Subscription lifecycle states — mirror Stripe subscription statuses so we
+ * can 1:1 project webhook events onto this field.
+ * https://stripe.com/docs/api/subscriptions/object#subscription_object-status
+ */
+export type SubscriptionStatus =
+  | "none"                // no subscription ever
+  | "incomplete"          // checkout started, first payment not yet succeeded
+  | "trialing"
+  | "active"              // paid + entitled
+  | "past_due"            // failed payment, still active during retry window
+  | "unpaid"              // retries exhausted, access revoked
+  | "canceled"            // user cancelled; may still have access until period end
+  | "expired";            // period-end reached, access revoked
+
 export type User = {
   email: string;
-  passwordHash: string;   // scrypt$N$saltB64$hashB64
+  name: string | null;              // captured at self-serve registration
+  organization: string | null;      // captured at self-serve registration
+  passwordHash: string;             // scrypt$N$saltB64$hashB64
   totpSecret: string | null;
   totpEnrolled: boolean;
   // Password reset: token stored as sha256 hex so the at-rest file doesn't
   // contain the verbatim secret. The plaintext only exists in the email link.
   passwordResetTokenHash: string | null;
   passwordResetExpires: string | null; // ISO date; ignore + clear if past
+  // Email verification for self-serve signup. Existing seeded users (demo /
+  // admin) are treated as verified so we don't lock them out.
+  emailVerified: boolean;
+  emailVerificationTokenHash: string | null;
+  emailVerificationExpires: string | null;
   // RBAC: gates assessment / import-export / admin features in the portal.
   // Missing = treated as "viewer" (lowest privilege).
   role: Role;
+  // Subscription state, mirrored from Stripe webhooks.
+  plan: string | null;                            // plan id (see lib/subscription/plans.ts)
+  subscriptionStatus: SubscriptionStatus;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  currentPeriodEnd: string | null;                // ISO date
+  cancelAtPeriodEnd: boolean;
   createdAt: string;
 };
 
@@ -69,12 +98,23 @@ export async function loadStore(): Promise<Store> {
   if (!cache.users[DEMO_EMAIL]) {
     cache.users[DEMO_EMAIL] = {
       email: DEMO_EMAIL,
+      name: "Demo User",
+      organization: "CyberAutopsy Demo",
       passwordHash: hashPassword(DEMO_PASSWORD),
       totpSecret: DEMO_TOTP_SECRET,
       totpEnrolled: true,
       passwordResetTokenHash: null,
       passwordResetExpires: null,
+      emailVerified: true,
+      emailVerificationTokenHash: null,
+      emailVerificationExpires: null,
       role: "demo",
+      plan: null,
+      subscriptionStatus: "none",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
       createdAt: new Date().toISOString()
     };
     await persist();
@@ -91,12 +131,23 @@ export async function loadStore(): Promise<Store> {
     if (!existing) {
       cache.users[ADMIN_EMAIL] = {
         email: ADMIN_EMAIL,
+        name: "Platform Administrator",
+        organization: "CyberAutopsy",
         passwordHash: hashPassword(ADMIN_PASSWORD),
         totpSecret: ADMIN_TOTP_SECRET,
         totpEnrolled: true,
         passwordResetTokenHash: null,
         passwordResetExpires: null,
+        emailVerified: true,
+        emailVerificationTokenHash: null,
+        emailVerificationExpires: null,
         role: "admin",
+        plan: null,
+        subscriptionStatus: "none",
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
         createdAt: new Date().toISOString()
       };
       await persist();
@@ -132,6 +183,22 @@ export async function loadStore(): Promise<Store> {
       u.passwordResetExpires = null;
       dirty = true;
     }
+    // Backfill self-serve registration + subscription fields on old records.
+    if (u.name === undefined) { u.name = null; dirty = true; }
+    if (u.organization === undefined) { u.organization = null; dirty = true; }
+    if (u.emailVerified === undefined) {
+      // Existing pre-signup users (demo / admin) are treated as verified.
+      u.emailVerified = true;
+      dirty = true;
+    }
+    if (u.emailVerificationTokenHash === undefined) { u.emailVerificationTokenHash = null; dirty = true; }
+    if (u.emailVerificationExpires === undefined) { u.emailVerificationExpires = null; dirty = true; }
+    if (u.plan === undefined) { u.plan = null; dirty = true; }
+    if (u.subscriptionStatus === undefined) { u.subscriptionStatus = "none"; dirty = true; }
+    if (u.stripeCustomerId === undefined) { u.stripeCustomerId = null; dirty = true; }
+    if (u.stripeSubscriptionId === undefined) { u.stripeSubscriptionId = null; dirty = true; }
+    if (u.currentPeriodEnd === undefined) { u.currentPeriodEnd = null; dirty = true; }
+    if (u.cancelAtPeriodEnd === undefined) { u.cancelAtPeriodEnd = false; dirty = true; }
     // Vestigial WebAuthn fields — drop them so the store settles on the
     // narrower User shape.
     const bag = u as unknown as Record<string, unknown>;
@@ -156,6 +223,54 @@ export async function loadStore(): Promise<Store> {
   }
   if (dirty) await persist();
   return cache;
+}
+
+/* ---------- self-serve registration + subscription helpers ---------- */
+
+/** Insert a new self-serve user in an unverified, unsubscribed state. */
+export async function createUser(input: {
+  email: string;
+  name: string;
+  organization: string;
+  password: string;
+}): Promise<User> {
+  const s = await loadStore();
+  const email = input.email.trim().toLowerCase();
+  if (s.users[email]) throw new Error("An account with that email already exists.");
+  const now = new Date().toISOString();
+  const user: User = {
+    email,
+    name: input.name.trim(),
+    organization: input.organization.trim(),
+    passwordHash: hashPassword(input.password),
+    totpSecret: null,
+    totpEnrolled: false,
+    passwordResetTokenHash: null,
+    passwordResetExpires: null,
+    emailVerified: false,
+    emailVerificationTokenHash: null,
+    emailVerificationExpires: null,
+    role: "viewer",
+    plan: null,
+    subscriptionStatus: "none",
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    createdAt: now
+  };
+  s.users[email] = user;
+  await persist();
+  return user;
+}
+
+/** Look up a user by Stripe customer id — used by webhook handlers. */
+export async function getUserByStripeCustomerId(customerId: string): Promise<User | null> {
+  const s = await loadStore();
+  for (const u of Object.values(s.users)) {
+    if (u.stripeCustomerId === customerId) return u;
+  }
+  return null;
 }
 
 /** Demo user constant — referenced from reset endpoint to keep credentials stable across resets. */
