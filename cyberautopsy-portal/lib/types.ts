@@ -16,6 +16,12 @@ export type Control = {
   familyName: string;
   name: string;
   requirement: string;
+  /**
+   * Per-control assessment objectives from NIST SP 800-171A. Each element is
+   * a single determination statement the assessor evaluates. Rendered as
+   * [a], [b], [c]… in the UI + exports by array index.
+   */
+  objectives: string[];
   status: ControlStatus;
   weight: 1 | 3 | 5;     // SPRS weight
   owner?: string;

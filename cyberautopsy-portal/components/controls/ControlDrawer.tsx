@@ -323,15 +323,30 @@ function Overview({
         />
       </Section>
 
-      <Section title="Assessment objectives (NIST 800-171A)">
-        <ul className="space-y-2 text-sm text-bone-200">
-          {["[a] objective met against authoritative artifact", "[b] objective met under examination", "[c] interview corroboration recorded"].map((s, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="mt-1.5 inline-block h-1.5 w-1.5 rotate-45 bg-gold-300 shrink-0" aria-hidden />
-              <span>{s}</span>
-            </li>
-          ))}
-        </ul>
+      <Section title={`Assessment objectives (NIST SP 800-171A) — ${control.objectives.length} objective${control.objectives.length === 1 ? "" : "s"}`}>
+        {control.objectives.length === 0 ? (
+          <p className="text-sm italic text-bone-400">
+            No objectives loaded for this control. See NIST SP 800-171A for the authoritative
+            determination statements.
+          </p>
+        ) : (
+          <ol className="space-y-2 text-sm text-bone-200">
+            {control.objectives.map((o, i) => {
+              const letter = String.fromCharCode(97 + (i % 26));
+              return (
+                <li key={i} className="flex gap-3">
+                  <span className="mt-0.5 shrink-0 font-mono text-[11px] tracking-widest2 text-gold-300">
+                    [{letter}]
+                  </span>
+                  <span>{o}</span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        <p className="mt-3 font-mono text-[10px] tracking-widest text-bone-500">
+          SOURCE · NIST SP 800-171A · §{control.sspSection}
+        </p>
       </Section>
 
       {canEdit && (

@@ -136,6 +136,53 @@ export async function buildSSPAppendixD(): Promise<Buffer> {
     stats.addRow([`${code} · ${FAMILY_NAMES[code]}`, p.impl, p.total]);
   }
 
+  /* ---------- Assessment Objectives (NIST SP 800-171A) ---------- */
+  const obj = wb.addWorksheet("Assessment Objectives");
+  obj.columns = [
+    { header: "Control ID",   key: "id",        width: 12 },
+    { header: "Family",       key: "family",    width: 8  },
+    { header: "Control name", key: "name",      width: 34 },
+    { header: "Objective",    key: "objective", width: 16 },
+    { header: "Determination statement", key: "statement", width: 90 },
+    { header: "Assessor verdict", key: "verdict", width: 18 }
+  ];
+  let objRowCount = 0;
+  for (const c of CONTROLS) {
+    if (c.objectives.length === 0) {
+      obj.addRow({
+        id: c.id, family: c.family, name: c.name,
+        objective: "—", statement: "(no objectives loaded)", verdict: ""
+      });
+      objRowCount += 1;
+      continue;
+    }
+    c.objectives.forEach((statement, idx) => {
+      const letter = String.fromCharCode(97 + (idx % 26));
+      obj.addRow({
+        id: c.id,
+        family: c.family,
+        name: c.name,
+        objective: `[${letter}]`,
+        statement,
+        verdict: ""
+      });
+      objRowCount += 1;
+    });
+  }
+  styleHeaderRow(obj, 1);
+  obj.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
+  for (let i = 2; i <= objRowCount + 1; i++) {
+    styleDataRow(obj, i);
+    obj.getRow(i).height = 28;
+  }
+  // Verdict dropdown for each objective row
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (obj as any).dataValidations.add(`F2:F${objRowCount + 1}`, {
+    type: "list",
+    allowBlank: true,
+    formulae: ['"Met,Met with notes,POA&M,Not Met,Not Applicable"']
+  });
+
   applyWatermark(wb, {
     docTitle: "SSP Appendix D — Control Summary",
     classification: e.classification
