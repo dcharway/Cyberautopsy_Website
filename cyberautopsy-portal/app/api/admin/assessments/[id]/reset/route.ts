@@ -26,6 +26,7 @@ import { clearAssessmentOverrides } from "@/lib/control-state";
 import { clearPreCMMC } from "@/lib/precmmc-store";
 import { clearFCI } from "@/lib/fci-store";
 import { clearCUI } from "@/lib/cui-store";
+import { clearScoping } from "@/lib/scoping-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     clearAssessmentOverrides(params.id),
     clearPreCMMC(params.id),
     clearFCI(params.id),
-    clearCUI(params.id)
+    clearCUI(params.id),
+    clearScoping(params.id)
   ]);
 
   // Stamp a reset note on the assessment so the audit trail records what
@@ -84,8 +86,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     assessmentId: params.id,
     resetAt: new Date().toISOString(),
     resetBy,
-    cleared: { poams: true, evidence: true, controlOverrides: true, precmmcChecklist: true, fciDetermination: true, cuiDetermination: true },
-    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true, precmmcSchema: true, fciSchema: true, cuiSchema: true },
+    cleared: { poams: true, evidence: true, controlOverrides: true, precmmcChecklist: true, fciDetermination: true, cuiDetermination: true, scopingModel: true },
+    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true, precmmcSchema: true, fciSchema: true, cuiSchema: true, scopingSchema: true },
     assessment: stamped
   });
 }

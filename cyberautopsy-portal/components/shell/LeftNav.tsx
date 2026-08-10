@@ -17,6 +17,7 @@ import {
   ClipboardList,
   ScanSearch,
   Layers,
+  Network,
   type LucideIcon
 } from "lucide-react";
 import { Mark } from "./Mark";
@@ -36,6 +37,7 @@ const NAV: NavItem[] = [
   { href: "/admin/clients",     label: "Clients",            icon: Building2,       count: null, adminOnly: true },
   { href: "/fci-determination", label: "FCI Determination",  icon: ScanSearch,      count: null, adminOnly: true },
   { href: "/cui-determination", label: "CUI Determination",  icon: Layers,          count: null, adminOnly: true },
+  { href: "/scoping-model",     label: "Scoping Model",      icon: Network,         count: null, adminOnly: true },
   { href: "/precmmc",           label: "Pre-CMMC",           icon: ClipboardList,   count: null, adminOnly: true },
   { href: "/controls",          label: "Controls",           icon: ListChecks,      count: 110 },
   { href: "/evidence",          label: "Evidence",           icon: FolderArchive,   count: null },
