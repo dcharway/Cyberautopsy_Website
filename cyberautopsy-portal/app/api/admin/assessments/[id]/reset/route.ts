@@ -24,6 +24,7 @@ import { clearPOAMs } from "@/lib/poam-store";
 import { clearEvidence } from "@/lib/evidence-store";
 import { clearAssessmentOverrides } from "@/lib/control-state";
 import { clearPreCMMC } from "@/lib/precmmc-store";
+import { clearFCI } from "@/lib/fci-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +60,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     clearPOAMs(params.id),
     clearEvidence(params.id),
     clearAssessmentOverrides(params.id),
-    clearPreCMMC(params.id)
+    clearPreCMMC(params.id),
+    clearFCI(params.id)
   ]);
 
   // Stamp a reset note on the assessment so the audit trail records what
@@ -80,8 +82,8 @@ export async function POST(req: Request, { params }: RouteParams) {
     assessmentId: params.id,
     resetAt: new Date().toISOString(),
     resetBy,
-    cleared: { poams: true, evidence: true, controlOverrides: true, precmmcChecklist: true },
-    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true, precmmcSchema: true },
+    cleared: { poams: true, evidence: true, controlOverrides: true, precmmcChecklist: true, fciDetermination: true },
+    preserved: { assessmentMetadata: true, clientRecord: true, controlFramework: true, precmmcSchema: true, fciSchema: true },
     assessment: stamped
   });
 }
