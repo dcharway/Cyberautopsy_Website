@@ -33,6 +33,17 @@ export type POAMHistoryEntry = {
   note?: string;
 };
 
+export type POAMAttachment = {
+  id: string;                    // "att_..." random hex
+  originalName: string;
+  storedName: string;            // on-disk filename ({id}__{safeName})
+  contentType: string;
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+  kind: "image" | "document";    // driven by extension — used by the UI to render thumbnails vs file chips
+};
+
 export type POAMItem = {
   id: string;
   assessmentId: string;
@@ -47,6 +58,7 @@ export type POAMItem = {
   opened: string;
   closed?: string;
   comments?: string;
+  attachments: POAMAttachment[];
   history: POAMHistoryEntry[];
   createdAt: string;
   createdBy: string;
@@ -54,11 +66,32 @@ export type POAMItem = {
   archivedBy?: string;
 };
 
+/** Allowed upload rules — mirror the pre-CMMC uploader shape so validators
+ *  stay in one place, but with images explicitly first-class. */
+export const POAM_UPLOAD_RULES = {
+  acceptedExtensions: [
+    // Images
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "tiff",
+    // Documents
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "txt", "csv", "log", "json", "xml", "html",
+    // Diagrams / archives
+    "vsdx", "drawio", "zip"
+  ],
+  imageExtensions: new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "tiff"]),
+  maxBytes: 25 * 1024 * 1024 // 25 MB — POA&M evidence tends to be screenshots and scan PDFs
+} as const;
+
+export class POAMUploadValidationError extends Error {
+  status = 400;
+}
+
 const IS_VERCEL = Boolean(process.env.VERCEL);
 const DATA_DIR = IS_VERCEL
   ? path.join(os.tmpdir(), "cyberautopsy-data")
   : path.join(process.cwd(), ".data");
 const POAM_DIR = path.join(DATA_DIR, "poam");
+const POAM_UPLOADS_DIR = path.join(DATA_DIR, "poam-uploads");
 
 type Store = { items: Record<string, POAMItem> };
 
@@ -89,6 +122,7 @@ async function ensureLoaded(assessmentId: string): Promise<Store> {
           ...p,
           assessmentId,
           milestones: [],
+          attachments: [],
           history: [
             {
               at: p.opened,
@@ -106,7 +140,16 @@ async function ensureLoaded(assessmentId: string): Promise<Store> {
       return store;
     }
   }
+  // Backfill attachments[] on old records so the new field is always safe to read.
+  let dirty = false;
+  for (const it of Object.values(store.items)) {
+    if (!Array.isArray(it.attachments)) {
+      it.attachments = [];
+      dirty = true;
+    }
+  }
   cache.set(assessmentId, store);
+  if (dirty) await persist(assessmentId);
   return store;
 }
 
@@ -125,7 +168,7 @@ export async function createPOAM(
   assessmentId: string,
   data: Omit<
     POAMItem,
-    | "id" | "assessmentId" | "history" | "milestones" | "createdAt" | "createdBy" | "archivedAt" | "archivedBy"
+    | "id" | "assessmentId" | "history" | "milestones" | "attachments" | "createdAt" | "createdBy" | "archivedAt" | "archivedBy"
   > & { milestones?: Milestone[] },
   createdBy: string
 ): Promise<POAMItem> {
@@ -138,6 +181,7 @@ export async function createPOAM(
     id,
     assessmentId,
     milestones: data.milestones ?? [],
+    attachments: [],
     history: [
       {
         at: now,
@@ -218,10 +262,171 @@ export async function updatePOAM(
  * action. We persist an explicit empty file so the next `ensureLoaded` reads
  * valid JSON and does NOT re-seed the demo POA&M set — even on the seeded
  * demo assessment, a reset means a clean slate.
+ *
+ * Also nukes every uploaded attachment blob for the assessment so no orphan
+ * bytes linger on disk after the reset.
  */
 export async function clearPOAMs(assessmentId: string): Promise<void> {
   cache.set(assessmentId, { items: {} });
   await persist(assessmentId);
+  if (writableFs) {
+    try {
+      await fs.rm(path.join(POAM_UPLOADS_DIR, assessmentId), { recursive: true, force: true });
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") throw err;
+    }
+  }
+}
+
+/* ---------- attachment helpers ---------- */
+
+function sanitizeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "upload";
+}
+function extOf(name: string): string {
+  const ix = name.lastIndexOf(".");
+  return ix === -1 ? "" : name.slice(ix + 1).toLowerCase();
+}
+function attachmentDir(assessmentId: string, poamId: string): string {
+  return path.join(POAM_UPLOADS_DIR, assessmentId, poamId);
+}
+function attachmentPath(assessmentId: string, poamId: string, storedName: string): string {
+  return path.join(attachmentDir(assessmentId, poamId), storedName);
+}
+
+/**
+ * Persist a new attachment for a POA&M, appending to attachments[] + adding a
+ * history entry so the audit trail shows exactly when the file arrived.
+ */
+export async function addPOAMAttachment(
+  assessmentId: string,
+  poamId: string,
+  file: { originalName: string; contentType: string; size: number; bytes: Buffer },
+  uploadedBy: string
+): Promise<{ item: POAMItem; attachment: POAMAttachment }> {
+  const store = await ensureLoaded(assessmentId);
+  const existing = store.items[poamId];
+  if (!existing) throw new Error(`POA&M ${poamId} not found`);
+
+  const ext = extOf(file.originalName);
+  if (!POAM_UPLOAD_RULES.acceptedExtensions.includes(ext as (typeof POAM_UPLOAD_RULES.acceptedExtensions)[number])) {
+    throw new POAMUploadValidationError(
+      `Unsupported file type ".${ext}". Allowed: ${POAM_UPLOAD_RULES.acceptedExtensions.join(", ")}.`
+    );
+  }
+  if (file.size > POAM_UPLOAD_RULES.maxBytes) {
+    throw new POAMUploadValidationError(
+      `File is ${(file.size / 1024 / 1024).toFixed(1)} MB — limit is ${POAM_UPLOAD_RULES.maxBytes / 1024 / 1024} MB.`
+    );
+  }
+  if (!writableFs) {
+    throw new Error("Filesystem is read-only. POA&M uploads are disabled in this deployment.");
+  }
+
+  const id = `att_${randomBytes(6).toString("hex")}`;
+  const safe = sanitizeName(file.originalName);
+  const storedName = `${id}__${safe}`;
+
+  try {
+    await fs.mkdir(attachmentDir(assessmentId, poamId), { recursive: true });
+    await fs.writeFile(attachmentPath(assessmentId, poamId, storedName), file.bytes);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EROFS" || code === "EACCES" || code === "EPERM") {
+      writableFs = false;
+      throw new Error(`Filesystem read-only (${code}). Configure persistent storage to enable uploads.`);
+    }
+    throw err;
+  }
+
+  const attachment: POAMAttachment = {
+    id,
+    originalName: file.originalName,
+    storedName,
+    contentType: file.contentType || "application/octet-stream",
+    size: file.size,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy,
+    kind: POAM_UPLOAD_RULES.imageExtensions.has(ext) ? "image" : "document"
+  };
+
+  const now = new Date().toISOString();
+  const next: POAMItem = {
+    ...existing,
+    attachments: [...existing.attachments, attachment],
+    history: [
+      ...existing.history,
+      {
+        at: now,
+        by: uploadedBy,
+        changes: [{ field: "attachment", from: null, to: attachment.originalName }],
+        note: `Attached ${attachment.originalName} (${(attachment.size / 1024).toFixed(0)} KB)`
+      }
+    ]
+  };
+  store.items[poamId] = next;
+  await persist(assessmentId);
+  return { item: next, attachment };
+}
+
+/** Fetch attachment metadata + bytes for download. */
+export async function readPOAMAttachment(
+  assessmentId: string,
+  poamId: string,
+  attachmentId: string
+): Promise<{ attachment: POAMAttachment; bytes: Buffer } | null> {
+  const store = await ensureLoaded(assessmentId);
+  const item = store.items[poamId];
+  if (!item) return null;
+  const att = item.attachments.find((a) => a.id === attachmentId);
+  if (!att) return null;
+  try {
+    const bytes = await fs.readFile(attachmentPath(assessmentId, poamId, att.storedName));
+    return { attachment: att, bytes };
+  } catch {
+    return null;
+  }
+}
+
+/** Remove an attachment, delete its bytes from disk, and audit-log it. */
+export async function removePOAMAttachment(
+  assessmentId: string,
+  poamId: string,
+  attachmentId: string,
+  removedBy: string
+): Promise<POAMItem> {
+  const store = await ensureLoaded(assessmentId);
+  const existing = store.items[poamId];
+  if (!existing) throw new Error(`POA&M ${poamId} not found`);
+  const att = existing.attachments.find((a) => a.id === attachmentId);
+  if (!att) throw new Error(`Attachment ${attachmentId} not found on ${poamId}`);
+
+  if (writableFs) {
+    try {
+      await fs.unlink(attachmentPath(assessmentId, poamId, att.storedName));
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") throw err;
+    }
+  }
+  const now = new Date().toISOString();
+  const next: POAMItem = {
+    ...existing,
+    attachments: existing.attachments.filter((a) => a.id !== attachmentId),
+    history: [
+      ...existing.history,
+      {
+        at: now,
+        by: removedBy,
+        changes: [{ field: "attachment", from: att.originalName, to: null }],
+        note: `Removed ${att.originalName}`
+      }
+    ]
+  };
+  store.items[poamId] = next;
+  await persist(assessmentId);
+  return next;
 }
 
 export async function archivePOAM(

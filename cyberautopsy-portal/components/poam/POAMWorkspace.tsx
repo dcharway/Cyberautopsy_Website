@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -11,10 +11,15 @@ import {
   Archive,
   History as HistoryIcon,
   X,
-  Save
+  Save,
+  Paperclip,
+  Upload,
+  Download,
+  Trash2,
+  FileText
 } from "lucide-react";
 import Link from "next/link";
-import type { POAMItem } from "@/lib/poam-store";
+import type { POAMItem, POAMAttachment } from "@/lib/poam-store";
 import type { Client } from "@/lib/clients";
 import type { Assessment } from "@/lib/assessments";
 import { cn } from "@/lib/utils";
@@ -219,9 +224,14 @@ export function POAMWorkspace({ client, assessment, initialItems }: Props) {
       {drawerItem && (
         <POAMDrawer
           item={drawerItem}
+          assessmentId={assessment.id}
           onClose={() => setDrawerItem(null)}
           onSave={(updates, note) => patchItem(drawerItem.id, updates, note)}
           onArchive={() => archiveItem(drawerItem.id)}
+          onItemChanged={(next) => {
+            setItems((prev) => prev.map((i) => (i.id === next.id ? next : i)));
+            setDrawerItem(next);
+          }}
         />
       )}
     </div>
@@ -293,6 +303,14 @@ function Card({
           {overdue && <AlertCircle size={11} />}
           <Calendar size={11} /> {item.scheduledClose}
         </span>
+        {item.attachments.length > 0 && (
+          <span
+            className="flex items-center gap-1 text-gold-300"
+            title={`${item.attachments.length} attachment${item.attachments.length === 1 ? "" : "s"}`}
+          >
+            <Paperclip size={11} /> {item.attachments.length}
+          </span>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between border-t border-ink-700 pt-2">
@@ -405,14 +423,18 @@ function NewPOAMDialog({
 
 function POAMDrawer({
   item,
+  assessmentId,
   onClose,
   onSave,
-  onArchive
+  onArchive,
+  onItemChanged
 }: {
   item: POAMItem;
+  assessmentId: string;
   onClose: () => void;
   onSave: (updates: Partial<POAMItem>, note?: string) => Promise<POAMItem>;
   onArchive: () => void;
+  onItemChanged: (next: POAMItem) => void;
 }) {
   const [form, setForm] = useState({
     weakness: item.weakness,
@@ -424,7 +446,7 @@ function POAMDrawer({
     comments: item.comments ?? "",
     note: ""
   });
-  const [tab, setTab] = useState<"edit" | "history">("edit");
+  const [tab, setTab] = useState<"edit" | "attachments" | "history">("edit");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -461,6 +483,9 @@ function POAMDrawer({
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-ink-700 px-6">
           <TabButton active={tab === "edit"} onClick={() => setTab("edit")} icon={<Pencil size={12} />}>Edit</TabButton>
+          <TabButton active={tab === "attachments"} onClick={() => setTab("attachments")} icon={<Paperclip size={12} />}>
+            Attachments ({item.attachments.length})
+          </TabButton>
           <TabButton active={tab === "history"} onClick={() => setTab("history")} icon={<HistoryIcon size={12} />}>
             History ({item.history.length})
           </TabButton>
@@ -468,7 +493,14 @@ function POAMDrawer({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {tab === "edit" ? (
+          {tab === "attachments" && (
+            <AttachmentsPanel
+              item={item}
+              assessmentId={assessmentId}
+              onChanged={onItemChanged}
+            />
+          )}
+          {tab === "edit" && (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -508,7 +540,8 @@ function POAMDrawer({
                 </button>
               </div>
             </form>
-          ) : (
+          )}
+          {tab === "history" && (
             <ol className="space-y-3">
               {[...item.history].reverse().map((h, idx) => (
                 <li key={idx} className="border border-ink-700 bg-ink-950 p-4">
@@ -569,6 +602,218 @@ function TabButton({
     >
       {icon} {children}
     </button>
+  );
+}
+
+/* ---------- Attachments panel ---------- */
+
+const ACCEPT_ATTR = [
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".tiff",
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+  ".txt", ".csv", ".log", ".json", ".xml", ".html",
+  ".vsdx", ".drawio", ".zip"
+].join(",");
+const MAX_MB = 25;
+
+function AttachmentsPanel({
+  item,
+  assessmentId,
+  onChanged
+}: {
+  item: POAMItem;
+  assessmentId: string;
+  onChanged: (next: POAMItem) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setErr(null);
+    setUploading(true);
+    try {
+      for (const file of files) {
+        if (file.size > MAX_MB * 1024 * 1024) {
+          throw new Error(`${file.name}: file exceeds ${MAX_MB} MB.`);
+        }
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(
+          `/api/admin/poam/${item.id}/attachments?assessmentId=${assessmentId}`,
+          { method: "POST", body: form }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Upload failed");
+        onChanged(data.item);
+      }
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function removeAttachment(att: POAMAttachment) {
+    if (!window.confirm(`Delete "${att.originalName}"? This cannot be undone.`)) return;
+    setErr(null);
+    try {
+      const res = await fetch(
+        `/api/admin/poam/${item.id}/attachments/${att.id}?assessmentId=${assessmentId}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      onChanged(data.item);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
+  const images = item.attachments.filter((a) => a.kind === "image");
+  const documents = item.attachments.filter((a) => a.kind !== "image");
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">
+          UPLOAD EVIDENCE
+        </div>
+        <p className="mt-1 text-xs text-bone-400">
+          Screenshots, scan reports, remediation proofs, closure evidence. Images render as
+          previews; other files show as chips. Max {MAX_MB} MB per file — accepts PNG · JPG · PDF ·
+          DOCX · XLSX · CSV · VSDX · Drawio · ZIP + more.
+        </p>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="mt-3 inline-flex items-center gap-2 border border-gold-300/40 bg-gold-300/5 px-4 py-2 text-xs text-gold-100 hover:bg-gold-300 hover:text-ink-950 disabled:opacity-60"
+        >
+          <Upload size={12} /> {uploading ? "Uploading…" : "Add files"}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={ACCEPT_ATTR}
+          onChange={onFileSelected}
+          className="hidden"
+        />
+        {err && (
+          <div className="mt-3 flex items-center gap-2 border border-status-failed/60 bg-status-failedBg px-3 py-2 text-xs text-status-failed">
+            <AlertCircle size={12} /> {err}
+          </div>
+        )}
+      </div>
+
+      {images.length === 0 && documents.length === 0 && (
+        <p className="text-xs text-bone-400 border border-dashed border-ink-700 p-6 text-center">
+          No attachments yet. Drop screenshots or PDFs here as remediation evidence lands.
+        </p>
+      )}
+
+      {images.length > 0 && (
+        <section>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">
+            IMAGES ({images.length})
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {images.map((a) => (
+              <figure key={a.id} className="group border border-ink-700 bg-ink-950">
+                <div className="relative aspect-video overflow-hidden bg-ink-800">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/admin/poam/${item.id}/attachments/${a.id}?assessmentId=${assessmentId}`}
+                    alt={a.originalName}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <figcaption className="flex items-center justify-between gap-2 border-t border-ink-700 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs text-bone-100" title={a.originalName}>
+                      {a.originalName}
+                    </div>
+                    <div className="font-mono text-[10px] text-bone-400">
+                      {(a.size / 1024).toFixed(0)} KB · {a.uploadedAt.slice(0, 10)} · {a.uploadedBy}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <a
+                      href={`/api/admin/poam/${item.id}/attachments/${a.id}?assessmentId=${assessmentId}&download=1`}
+                      title="Download"
+                      className="border border-ink-700 p-1.5 text-bone-300 hover:border-gold-300/40 hover:text-gold-100"
+                    >
+                      <Download size={11} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(a)}
+                      title="Delete"
+                      className="border border-ink-700 p-1.5 text-bone-300 hover:border-status-failed/60 hover:text-status-failed"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {documents.length > 0 && (
+        <section>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-gold-300">
+            DOCUMENTS ({documents.length})
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            {documents.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 border border-ink-700 bg-ink-950 px-3 py-2"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText size={13} className="text-bone-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="truncate text-xs text-bone-100" title={a.originalName}>
+                      {a.originalName}
+                    </div>
+                    <div className="font-mono text-[10px] text-bone-400">
+                      {(a.size / 1024).toFixed(0)} KB · {a.contentType} · {a.uploadedAt.slice(0, 10)} · {a.uploadedBy}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <a
+                    href={`/api/admin/poam/${item.id}/attachments/${a.id}?assessmentId=${assessmentId}&download=1`}
+                    title="Download"
+                    className="border border-ink-700 p-1.5 text-bone-300 hover:border-gold-300/40 hover:text-gold-100"
+                  >
+                    <Download size={11} />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(a)}
+                    title="Delete"
+                    className="border border-ink-700 p-1.5 text-bone-300 hover:border-status-failed/60 hover:text-status-failed"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <p className="text-[11px] text-bone-400">
+        Every add / remove is auto-logged in the History tab so the C3PAO can trace when evidence
+        arrived and when it was replaced.
+      </p>
+    </div>
   );
 }
 
