@@ -7,7 +7,9 @@ const nextConfig = {
     // Require it at runtime instead. pdfkit ships its standard fonts as .afm assets
     // resolved via __dirname — also keep it external so the bundler doesn't try to
     // rewrite those paths.
-    serverComponentsExternalPackages: ["exceljs", "pdfkit"]
+    // parse/node ships XHR + WebSocket adapters that don't survive Next's
+    // client-bundle pass; keep it server-external.
+    serverComponentsExternalPackages: ["exceljs", "pdfkit", "parse"]
   }
 };
 module.exports = nextConfig;
